@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "248278168537",
+    "project_id": "mecore-71ced",
+    "storage_bucket": "mecore-71ced.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:248278168537:android:f9a2838431cf9a954f5fc8",
+        "android_client_info": {
+          "package_name": "com.example.mecore"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWnxxma9iBfUJVbypvOt8gt9gNyS4Pn34"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

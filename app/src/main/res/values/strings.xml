@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MeCore</string>
+    <string name="password">Password</string>
+    <string name="register">Register</string>
+    <string name="email">Email</string>
+    <string name="welcome_to_mecore">Welcome To MeCore</string>
+    <string name="forgot_password_reset_password">Forgot Password? Reset Password</string>
+    <string name="fortnite">Fortnite</string>
+    <string name="select_the_games_you_play">Select the games you play</string>
+    <string name="minecraft">Minecraft</string>
+    <string name="league_of_legends">League of Legends</string>
+    <string name="submit">Submit</string>
+    <string name="final_fantasy_xiv">Final Fantasy XIV</string>
+    <string name="minecraft_dungeons">Minecraft Dungeons</string>
+    <string name="genshin_impact">Genshin Impact</string>
+    <string name="the_witcher_3">The Witcher 3</string>
+    <string name="world_of_warcraft">World of Warcraft</string>
+    <string name="valorant">Valorant</string>
+    <string name="fifa_21">FIFA 21</string>
+    <string name="hearthstone">Hearthstone</string>
+    <string name="among_us">Among Us</string>
+    <string name="roblox">Roblox</string>
+    <string name="rocket_league">Rocket League</string>
+    <string name="overwatch">Overwatch</string>
+    <string name="counter_strike_global_offensive">Counter-Strike: Global Offensive</string>
+    <string name="call_of_duty">Call of Duty</string>
+    <string name="apex_legends">Apex Legends</string>
+    <string name="pubg">PUBG</string>
+    <string name="warzone">Warzone</string>
+    <string name="enter_username">Enter username</string>
+    <string name="search_user">Search User</string>
+    <string name="results_will_appear_here">Results will appear here</string>
+    <string name="find_random_user">Find Random User</string>
+    <string name="send_friend_request">Send Friend Request</string>
+    <string name="user_name">User Name</string>
+    <string name="send">Send</string>
+    <string name="type_a_message">Type a message</string>
+</resources>
