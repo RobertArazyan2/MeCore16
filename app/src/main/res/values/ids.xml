@@ -41,4 +41,10 @@
     <id name="contentTextView" />
     <id name="messageInput" />
     <id name="sendButton" />
+    <id name="acceptButton" />
+    <id name="declineButton" />
+    <id name="findUserButton" />
+    <id name="nav_home" />
+    <id name="nav_profile" />
+    <id name="nav_friends" />
 </resources>

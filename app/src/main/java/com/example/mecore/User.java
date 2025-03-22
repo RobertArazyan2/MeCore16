@@ -1,12 +1,30 @@
 package com.example.mecore;
 
-public class User {
-    private final String name;
+import java.util.List;
 
-    public User(String name, String number) {
-        this.name = name;
+public class User {
+    private String userId;
+    private String username;
+    private List<String> selectedGames;
+
+    public User() {
     }
-    public String getName() {
-        return name;
+
+    public User(String userId, String username, List<String> selectedGames) {
+        this.userId = userId;
+        this.username = username;
+        this.selectedGames = selectedGames;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public List<String> getSelectedGames() {
+        return selectedGames;
     }
 }

@@ -36,4 +36,22 @@
     <string name="user_name">User Name</string>
     <string name="send">Send</string>
     <string name="type_a_message">Type a message</string>
+    <string name="username">Username</string>
+    <string name="already_have_an_account_log_in">Already Have an account? Log in!</string>
+    <string name="decline" />
+    <string name="accept" />
+    <string name="user_document_not_found" />
+    <string name="error_loading_games" />
+    <string name="error_loading_users" />
+    <string name="no_users_found" />
+    <string name="no_users_match_games" />
+    <string name="user_username" />
+    <string name="no_user_selected" />
+    <string name="friend_request_sent" />
+    <string name="failed_to_send_request" />
+    <string name="profile">Profile</string>
+    <string name="chat">Chat</string>
+    <string name="main">Main</string>
+    <string name="data_not_loaded" />
+    <string name="skip">Skip</string>
 </resources>

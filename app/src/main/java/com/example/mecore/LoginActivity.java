@@ -23,6 +23,13 @@ public class LoginActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
 
+        // Check if the user is already logged in
+        if (mAuth.getCurrentUser() != null) {
+            // User is already logged in, skip login screen
+            startActivity(new Intent(LoginActivity.this, GameSelectingActivity.class));
+            finish();
+        }
+
         mEmail = findViewById(R.id.editTextEmail);
         mPassword = findViewById(R.id.editTextPassword);
         Button mLoginBtn = findViewById(R.id.buttonLogin);

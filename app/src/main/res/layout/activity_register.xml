@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -19,7 +20,8 @@
     <EditText
         android:id="@+id/editTextEmail"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="50dp"
+        android:autofillHints=""
         android:hint="@string/email"
         android:textColorHint="@color/white"
         android:inputType="textEmailAddress" />
@@ -27,16 +29,28 @@
     <EditText
         android:id="@+id/editTextPassword"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="50dp"
+        android:autofillHints=""
         android:hint="@string/password"
         android:textColorHint="@color/white"
         android:inputType="textPassword" />
+
+    <!-- Added username EditText -->
+    <EditText
+        android:id="@+id/editTextUsername"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:autofillHints=""
+        android:hint="@string/username"
+        android:textColorHint="@color/white"
+        android:inputType="textPersonName" />
 
     <Button
         android:id="@+id/buttonRegister"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/register"
+        android:textColor="@color/black"
         android:backgroundTint="@color/lime"/>
 
     <!-- Already Have an Account? Log in text -->
@@ -44,7 +58,7 @@
         android:id="@+id/textLogin"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Already Have an account? Log in!"
+        android:text="@string/already_have_an_account_log_in"
         android:textColor="@color/white"
         android:textSize="16sp"
         android:layout_marginTop="10dp"
@@ -58,12 +72,13 @@
         android:id="@+id/textResetPassword"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/forgot_password_reset_password"
+        android:text="Forgot Password?Reset It!"
         android:textColor="@color/white"
         android:textSize="16sp"
         android:layout_marginTop="10dp"
         android:clickable="true"
         android:focusable="true"
         android:gravity="center"
-        android:onClick="resetPassword"/>
+        android:onClick="resetPassword"
+        tools:ignore="HardcodedText" />
 </LinearLayout>

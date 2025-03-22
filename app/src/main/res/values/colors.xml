@@ -5,4 +5,6 @@
     <color name="lime">#54FD04</color>
     <color name="anotherlime">#32CD32</color>
     <color name="darkgrey">#272827</color>
+    <color name="red">#FF0000</color>
+    <color name="green">#06B106</color>
 </resources>
