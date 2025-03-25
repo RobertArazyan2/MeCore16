@@ -2,6 +2,8 @@
 agp = "8.7.3"
 firebaseBom = "33.10.0"
 fullSdk = "4.1.1"
+glide = "4.16.0"
+googleMaterial = "1.10.0"
 googleServices = "4.4.2"
 gradle = "7.4.2"
 gradleVersion = "7.4.1"
@@ -17,6 +19,7 @@ materialVersion = "<latest_version>"
 rtmSdk = "1.5.1"
 rtmSdkVersion = "1.5.0"
 voiceSdk = "4.2.2"
+firebaseStorage = "21.0.1"
 
 [libraries]
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
@@ -26,6 +29,7 @@ firebase-firestore = { module = "com.google.firebase:firebase-firestore" }
 firebase-firestore-ktx = { module = "com.google.firebase:firebase-firestore-ktx" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 full-sdk = { module = "io.agora.rtc:full-sdk", version.ref = "fullSdk" }
+glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 google-services = { module = "com.google.gms:google-services", version.ref = "googleServices" }
 gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
 gradle-v741 = { module = "com.android.tools.build:gradle", version.ref = "gradleVersion" }
@@ -37,10 +41,12 @@ material = { group = "com.google.android.material", name = "material", version.r
 activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
+material-v1100 = { module = "com.google.android.material:material", version.ref = "googleMaterial" }
 material-vlatestversion = { module = "com.google.android.material:material", version.ref = "materialVersion" }
 rtm-sdk = { module = "io.agora.rtm:rtm-sdk", version.ref = "rtmSdk" }
 rtm-sdk-v150 = { module = "io.agora.rtm:rtm-sdk", version.ref = "rtmSdkVersion" }
 voice-sdk = { module = "io.agora.rtc:voice-sdk", version.ref = "voiceSdk" }
+firebase-storage = { group = "com.google.firebase", name = "firebase-storage", version.ref = "firebaseStorage" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

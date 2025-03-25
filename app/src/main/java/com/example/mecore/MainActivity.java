@@ -1,17 +1,16 @@
 package com.example.mecore;
 
-import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
@@ -38,88 +37,64 @@ public class MainActivity extends AppCompatActivity {
     private String lastSkippedUserId = null;
     private final ExecutorService executorService = Executors.newFixedThreadPool(2);
 
-    private final ActivityResultLauncher<Intent> userProfileLauncher = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                    Intent data = result.getData();
-                    String action = data.getStringExtra("action");
-                    if ("skip".equals(action)) {
-                        lastSkippedUserId = data.getStringExtra("userId");
-                        Log.d(TAG, "userProfileLauncher: Skipped userId: " + lastSkippedUserId);
-                        findMatchingUser();
-                    } else if ("sent".equals(action)) {
-                        lastSkippedUserId = null;
-                        findMatchingUser();
-                    }
-                }
-            });
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "onCreate: Setting content view");
         setContentView(R.layout.activity_main);
+        Log.d(TAG, "MainActivity started");
 
-        Log.d(TAG, "onCreate: Initializing views");
+        mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
+
+        if (mAuth.getCurrentUser() == null) {
+            Log.w(TAG, "User not logged in");
+            startActivity(new Intent(this, RegisterActivity.class));
+            finish();
+            return;
+        }
+
         Button findUserButton = findViewById(R.id.findUserButton);
         Button searchUserButton = findViewById(R.id.searchButton);
         searchEditText = findViewById(R.id.searchEditText);
         resultTextView = findViewById(R.id.resultTextView);
 
-        Log.d(TAG, "onCreate: Setting up BottomNavigationView");
-        BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
-        bottomNavigationView.setOnItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.nav_home) {
-                return true;
-            } else if (itemId == R.id.nav_profile) {
-                Toast.makeText(this, "Profile clicked (not implemented)", Toast.LENGTH_SHORT).show();
-                return true;
-            } else if (itemId == R.id.nav_friends) {
-                Toast.makeText(this, "Friends clicked (not implemented)", Toast.LENGTH_SHORT).show();
-                return true;
-            }
-            return false;
-        });
-
-        Log.d(TAG, "onCreate: Initializing Firebase");
-        db = FirebaseFirestore.getInstance();
-        mAuth = FirebaseAuth.getInstance();
-
-        Log.d(TAG, "onCreate: Checking if user is logged in");
-        if (mAuth.getCurrentUser() == null) {
-            Log.w(TAG, "onCreate: User not logged in");
-            Toast.makeText(this, "User not logged in!", Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        Log.d(TAG, "onCreate: Loading selected games");
-        loadSelectedGames();
-        Log.d(TAG, "onCreate: Loading all users");
-        loadAllUsers();
-
-        Log.d(TAG, "onCreate: Setting up findUserButton click listener");
         findUserButton.setOnClickListener(v -> {
             Toast.makeText(MainActivity.this, "Finding user...", Toast.LENGTH_SHORT).show();
             findMatchingUser();
         });
 
-        Log.d(TAG, "onCreate: Setting up searchUserButton click listener");
         searchUserButton.setOnClickListener(v -> {
             String searchUsername = searchEditText.getText().toString().trim();
             if (searchUsername.isEmpty()) {
-                Toast.makeText(MainActivity.this, "Please enter a username to search", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Enter a username", Toast.LENGTH_SHORT).show();
                 return;
             }
             searchUserByUsername(searchUsername);
         });
-        Log.d(TAG, "onCreate: Completed");
+
+        BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
+        bottomNavigationView.setOnItemSelectedListener(this::onNavigationItemSelected);
+        bottomNavigationView.setSelectedItemId(R.id.navigation_main); // Highlight Main by default
+
+        loadSelectedGames();
+        loadAllUsers();
+    }
+
+    private boolean onNavigationItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.navigation_main) {
+            return true; // Stay on MainActivity
+        } else if (item.getItemId() == R.id.navigation_chat) {
+            startActivity(new Intent(this, ChatActivity.class));
+            return true;
+        } else if (item.getItemId() == R.id.navigation_profile) {
+            startActivity(new Intent(this, ProfileActivity.class));
+            return true;
+        }
+        return false;
     }
 
     private void loadSelectedGames() {
         String userId = Objects.requireNonNull(mAuth.getCurrentUser()).getUid();
-        Log.d(TAG, "loadSelectedGames: Loading games for userId: " + userId);
         executorService.execute(() -> db.collection("users").document(userId).get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
@@ -127,64 +102,27 @@ public class MainActivity extends AppCompatActivity {
                             Object gamesObject = task.getResult().get("selectedGames");
                             selectedGames = parseGameList(gamesObject);
                             isGamesLoaded = true;
-                            runOnUiThread(() -> {
-                                Toast.makeText(this, "Games loaded: " + selectedGames.size(), Toast.LENGTH_SHORT).show();
-                                Log.d(TAG, "loadSelectedGames: Games loaded: " + selectedGames.size());
-                                checkIfReady();
-                            });
-                        } else {
-                            Log.w(TAG, "loadSelectedGames: User document does not exist for userId: " + userId);
-                            runOnUiThread(() -> Toast.makeText(this, "User document does not exist for userId: " + userId, Toast.LENGTH_LONG).show());
                         }
-                    } else {
-                        String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error";
-                        Log.e(TAG, "loadSelectedGames: Error loading games: " + errorMessage);
-                        runOnUiThread(() -> Toast.makeText(this, "Error loading games: " + errorMessage, Toast.LENGTH_LONG).show());
                     }
                 }));
     }
 
     private void loadAllUsers() {
         String currentUserId = Objects.requireNonNull(mAuth.getCurrentUser()).getUid();
-        Log.d(TAG, "loadAllUsers: Loading all users, currentUserId: " + currentUserId);
         executorService.execute(() -> db.collection("users").get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         allUsers.clear();
-                        int totalUsers = task.getResult().size();
-                        int skippedUsersCount = 0;
                         for (QueryDocumentSnapshot doc : task.getResult()) {
                             String userId = doc.getId();
                             String username = doc.getString("username");
                             List<String> games = parseGameList(doc.get("selectedGames"));
-                            if (username == null || username.trim().isEmpty()) {
-                                Log.d(TAG, "loadAllUsers: Skipping userId: " + userId + " because username is null or empty");
-                                skippedUsersCount++;
-                                continue;
+                            if (username != null && !userId.equals(currentUserId)) {
+                                allUsers.add(new User(userId, username, games));
                             }
-                            if (userId.equals(currentUserId)) {
-                                Log.d(TAG, "loadAllUsers: Skipping userId: " + userId + " because it matches currentUserId");
-                                skippedUsersCount++;
-                                continue;
-                            }
-                            allUsers.add(new User(userId, username, games));
                         }
-                        int finalSkippedUsersCount = skippedUsersCount;
-                        runOnUiThread(() -> {
-                            Toast.makeText(this, "Loaded " + allUsers.size() + " users. Total: " + totalUsers + ", Skipped: " + finalSkippedUsersCount, Toast.LENGTH_LONG).show();
-                            Log.d(TAG, "loadAllUsers: Loaded " + allUsers.size() + " users. Total: " + totalUsers + ", Skipped: " + finalSkippedUsersCount);
-                            checkIfReady();
-                        });
-                    } else {
-                        String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error";
-                        Log.e(TAG, "loadAllUsers: Load failed: " + errorMessage);
-                        runOnUiThread(() -> Toast.makeText(this, "Load failed: " + errorMessage, Toast.LENGTH_LONG).show());
                     }
                 }));
-    }
-
-    private void checkIfReady() {
-        // No implementation needed
     }
 
     private List<String> parseGameList(Object gamesObject) {
@@ -199,11 +137,8 @@ public class MainActivity extends AppCompatActivity {
         return games;
     }
 
-    @SuppressLint({"StringFormatInvalid", "SetTextI18n"})
     private void findMatchingUser() {
-        Log.d(TAG, "findMatchingUser: Checking if data is loaded");
         if (!isGamesLoaded || allUsers.isEmpty()) {
-            Log.w(TAG, "findMatchingUser: Data not loaded. isGamesLoaded: " + isGamesLoaded + ", allUsers size: " + allUsers.size());
             resultTextView.setText("Data not loaded");
             resultTextView.setVisibility(View.VISIBLE);
             return;
@@ -217,7 +152,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (availableUsers.isEmpty()) {
-            Log.w(TAG, "findMatchingUser: No users available after filtering last skipped user");
             resultTextView.setText("No users available");
             resultTextView.setVisibility(View.VISIBLE);
             lastSkippedUserId = null;
@@ -231,28 +165,16 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        User selectedUser;
-        if (matches.isEmpty()) {
-            Collections.shuffle(availableUsers);
-            selectedUser = availableUsers.get(0);
-        } else {
-            Collections.shuffle(matches);
-            selectedUser = matches.get(0);
-        }
-
-        Log.d(TAG, "findMatchingUser: Navigating to UserProfileActivity for user: " + selectedUser.getUsername());
+        User selectedUser = matches.isEmpty() ? availableUsers.get(0) : matches.get(0);
         Intent intent = new Intent(MainActivity.this, UserProfileActivity.class);
         intent.putExtra("userId", selectedUser.getUserId());
         intent.putExtra("username", selectedUser.getUsername());
-        userProfileLauncher.launch(intent);
-
+        startActivity(intent);
         lastSkippedUserId = null;
     }
 
     private void searchUserByUsername(String searchUsername) {
-        Log.d(TAG, "searchUserByUsername: Searching for username: " + searchUsername);
         if (allUsers.isEmpty()) {
-            Log.w(TAG, "searchUserByUsername: No users loaded");
             Toast.makeText(this, "No users loaded", Toast.LENGTH_LONG).show();
             return;
         }
@@ -266,16 +188,14 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (foundUser == null) {
-            Log.w(TAG, "searchUserByUsername: User not found: " + searchUsername);
             Toast.makeText(this, "User not found: " + searchUsername, Toast.LENGTH_LONG).show();
             return;
         }
 
-        Log.d(TAG, "searchUserByUsername: Navigating to UserProfileActivity for user: " + foundUser.getUsername());
         Intent intent = new Intent(MainActivity.this, UserProfileActivity.class);
         intent.putExtra("userId", foundUser.getUserId());
         intent.putExtra("username", foundUser.getUsername());
-        userProfileLauncher.launch(intent);
+        startActivity(intent);
     }
 
     private boolean hasMatchingGame(List<String> userGames) {

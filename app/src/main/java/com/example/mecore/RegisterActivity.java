@@ -73,12 +73,10 @@ public class RegisterActivity extends AppCompatActivity {
                             FirebaseUser user = mAuth.getCurrentUser();
                             if (user != null) {
                                 String userId = user.getUid();
-                                Map<String, Object> userData = new HashMap<>();
-                                userData.put("username", username);
+                                Map<String, String> userData = new HashMap<>();                                userData.put("username", username);
                                 userData.put("email", email); // Save email as well
                                 List<String> selectedGames = new ArrayList<>();
-                                userData.put("selectedGames", selectedGames);
-
+                                userData.put("selectedGames", selectedGames.toString());
                                 db.collection("users").document(userId)
                                         .set(userData)
                                         .addOnSuccessListener(aVoid -> {
