@@ -6,9 +6,10 @@
         android:title="@string/profile" />
     <item
         android:id="@+id/navigation_main"
-        android:icon="@drawable/ic_home"  android:title="@string/main" />
+        android:icon="@drawable/ic_home"
+        android:title="@string/main" />
     <item
-        android:id="@+id/navigation_chat"
-        android:icon="@drawable/ic_chat"
-        android:title="@string/chat" />
+        android:id="@+id/navigation_friends"
+    android:icon="@drawable/ic_chat"
+    android:title="@string/chat" />
 </menu>

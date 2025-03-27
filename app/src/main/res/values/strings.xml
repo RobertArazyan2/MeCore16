@@ -54,4 +54,6 @@
     <string name="main">Main</string>
     <string name="data_not_loaded" />
     <string name="skip">Skip</string>
+    <string name="chats">Chats</string>
+    <string name="friend_requests">Friend Requests</string>
 </resources>

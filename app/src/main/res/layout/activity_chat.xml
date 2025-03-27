@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ChatActivity"
-    android:backgroundTint="@color/darkgrey">
+    android:background="@color/darkgrey">
 
     <!-- RecyclerView for displaying chat messages -->
     <androidx.recyclerview.widget.RecyclerView
@@ -23,10 +23,11 @@
 
     <android.widget.EditText
         android:id="@+id/messageInput"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_width="300dp"
+        android:layout_height="48dp"
         android:layout_marginTop="456dp"
         android:hint="@string/type_a_message"
+        android:textColorHint="@color/white"
         android:inputType="text"
         android:padding="10dp"
         app:layout_constraintEnd_toStartOf="@id/sendButton"

@@ -3,12 +3,9 @@ package com.example.mecore;
 import java.util.List;
 
 public class User {
-    private String userId;
-    private String username;
-    private List<String> selectedGames;
-
-    public User() {
-    }
+    private final String userId;
+    private final String username;
+    private final List<String> selectedGames;
 
     public User(String userId, String username, List<String> selectedGames) {
         this.userId = userId;

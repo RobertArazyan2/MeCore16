@@ -47,4 +47,11 @@
     <id name="nav_home" />
     <id name="nav_profile" />
     <id name="nav_friends" />
+    <id name="navigation_friends"  />
+    <id name="navigation_home"  />
+    <id name="friendRequestsButton"  />
+    <id name="chatListRecyclerView" />
+    <id name="usernameTextView" />
+    <id name="friendUsernameTextView" />
+    <item name="friendRequestsRecyclerView" type="id" />
 </resources>
