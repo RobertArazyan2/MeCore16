@@ -56,4 +56,6 @@
     <item name="friendRequestsRecyclerView" type="id" />
     <item name="navigation_chat" type="id" />
     <item name="gamesTextView" type="id" />
+    <item name="statusTextView" type="id" />
+    <item name="rejectButton" type="id" />
 </resources>
