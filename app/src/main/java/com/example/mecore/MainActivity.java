@@ -69,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d(TAG, "onCreate: Setting up BottomNavigationView");
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
-        bottomNavigationView.setSelectedItemId(R.id.navigation_home);
+        bottomNavigationView.setSelectedItemId(R.id.navigation_main);
         bottomNavigationView.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
             String itemName;
@@ -80,8 +80,8 @@ public class MainActivity extends AppCompatActivity {
             }
             Log.d("BottomNav", "Clicked ID: " + itemId + ", Resource: " + itemName);
 
-            if (itemId == R.id.navigation_home) {
-                Log.d("BottomNav", "Already on MainActivity (navigation_home)");
+            if (itemId == R.id.navigation_main) {
+                Log.d("BottomNav", "Already on MainActivity (navigation_main)");
                 return true;
             } else if (itemId == R.id.navigation_profile) {
                 Log.d("BottomNav", "Opening ProfileActivity");
@@ -94,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(this, "Failed to open Profile: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 }
                 return true;
-            } else if (itemId == R.id.navigation_friends) {
+            } else if (itemId == R.id.navigation_chat) {
                 Log.d("BottomNav", "Opening ChatListActivity");
                 try {
                     Intent intent = new Intent(MainActivity.this, ChatListActivity.class);
@@ -102,7 +102,18 @@ public class MainActivity extends AppCompatActivity {
                     Log.d("BottomNav", "ChatListActivity started successfully");
                 } catch (Exception e) {
                     Log.e("BottomNav", "Failed to start ChatListActivity: " + e.getMessage(), e);
-                    Toast.makeText(this, "Failed to open Chats: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Failed to open Chat: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                }
+                return true;
+            } else if (itemId == R.id.navigation_friends) {
+                Log.d("BottomNav", "Opening FriendRequestsActivity");
+                try {
+                    Intent intent = new Intent(MainActivity.this, FriendRequestsActivity.class);
+                    startActivity(intent);
+                    Log.d("BottomNav", "FriendRequestsActivity started successfully");
+                } catch (Exception e) {
+                    Log.e("BottomNav", "Failed to start FriendRequestsActivity: " + e.getMessage(), e);
+                    Toast.makeText(this, "Failed to open Friends: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 }
                 return true;
             }

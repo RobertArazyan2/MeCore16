@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/navigation_profile"
-        android:icon="@drawable/ic_profile"
-        android:title="@string/profile" />
+        android:id="@+id/navigation_friends"
+        android:icon="@drawable/friends_logo"
+        android:title="@string/friends" />
     <item
         android:id="@+id/navigation_main"
-        android:icon="@drawable/ic_home"
+        android:icon="@android:drawable/ic_menu_search"
         android:title="@string/main" />
     <item
-        android:id="@+id/navigation_friends"
-    android:icon="@drawable/ic_chat"
-    android:title="@string/chat" />
+        android:id="@+id/navigation_chat"
+        android:icon="@android:drawable/ic_menu_send"
+        android:title="@string/chat" />
+    <item
+        android:id="@+id/navigation_profile"
+        android:icon="@android:drawable/ic_menu_manage"
+        android:title="@string/profile" />
 </menu>

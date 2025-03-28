@@ -7,7 +7,9 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -67,37 +69,52 @@ public class RegisterActivity extends AppCompatActivity {
                 return;
             }
 
+            // Step 1: Create the Firebase Auth user
             mAuth.createUserWithEmailAndPassword(email, password)
                     .addOnCompleteListener(RegisterActivity.this, task -> {
                         if (task.isSuccessful()) {
                             FirebaseUser user = mAuth.getCurrentUser();
                             if (user != null) {
                                 String userId = user.getUid();
-                                Map<String, String> userData = new HashMap<>();                                userData.put("username", username);
-                                userData.put("email", email); // Save email as well
+
+                                // Step 2: Prepare user data for the users collection
+                                Map<String, Object> userData = new HashMap<>();
+                                userData.put("username", username);
+                                userData.put("email", email);
                                 List<String> selectedGames = new ArrayList<>();
-                                userData.put("selectedGames", selectedGames.toString());
-                                db.collection("users").document(userId)
-                                        .set(userData)
-                                        .addOnSuccessListener(aVoid -> {
-                                            Log.d("Register", "User document created successfully!");
-                                            user.sendEmailVerification()
-                                                    .addOnCompleteListener(sendTask -> {
-                                                        if (sendTask.isSuccessful()) {
-                                                            Toast.makeText(RegisterActivity.this, "Verification email sent.", Toast.LENGTH_SHORT).show();
-                                                            startActivity(new Intent(RegisterActivity.this, LoginActivity.class));
-                                                            finish();
-                                                        } else {
-                                                            Toast.makeText(RegisterActivity.this, "Failed to send verification email.", Toast.LENGTH_SHORT).show();
-                                                        }
-                                                    });
-                                        })
-                                        .addOnFailureListener(e -> {
-                                            Log.e("Register", "Error creating user document: ", e);
-                                            Toast.makeText(RegisterActivity.this, "Failed to save user data: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                            // Clean up: delete the Firebase Auth user if Firestore write fails
-                                            user.delete();
-                                        });
+                                userData.put("selectedGames", selectedGames); // Store as a list, not a string
+
+                                // Step 3: Prepare username tracking data for the usernames collection
+                                Map<String, Object> usernameData = new HashMap<>();
+                                usernameData.put("userId", userId);
+
+                                // Step 4: Write to both collections in a batch
+                                db.runBatch(batch -> {
+                                    batch.set(db.collection("users").document(userId), userData);
+                                    batch.set(db.collection("usernames").document(username), usernameData);
+                                }).addOnSuccessListener(aVoid -> {
+                                    Log.d("Register", "User document and username entry created successfully!");
+                                    user.sendEmailVerification()
+                                            .addOnCompleteListener(sendTask -> {
+                                                if (sendTask.isSuccessful()) {
+                                                    Toast.makeText(RegisterActivity.this, "Verification email sent.", Toast.LENGTH_SHORT).show();
+                                                    startActivity(new Intent(RegisterActivity.this, LoginActivity.class));
+                                                    finish();
+                                                } else {
+                                                    Toast.makeText(RegisterActivity.this, "Failed to send verification email.", Toast.LENGTH_SHORT).show();
+                                                }
+                                            });
+                                }).addOnFailureListener(e -> {
+                                    Log.e("Register", "Error creating user document or username entry: ", e);
+                                    String errorMessage = e.getMessage();
+                                    if (errorMessage != null && errorMessage.contains("PERMISSION_DENIED")) {
+                                        Toast.makeText(RegisterActivity.this, "Username already taken, please choose a different one", Toast.LENGTH_LONG).show();
+                                    } else {
+                                        Toast.makeText(RegisterActivity.this, "Failed to save user data: " + errorMessage, Toast.LENGTH_LONG).show();
+                                    }
+                                    // Clean up: delete the Firebase Auth user if Firestore write fails
+                                    user.delete();
+                                });
                             }
                         } else {
                             Toast.makeText(RegisterActivity.this, "Registration Failed: " + Objects.requireNonNull(task.getException()).getMessage(), Toast.LENGTH_LONG).show();

@@ -13,7 +13,7 @@ import java.util.List;
 
 public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdapter.FriendRequestViewHolder> {
 
-    private final List<Object> friendRequests;
+    private final List<FriendRequest> friendRequests;
     private final OnFriendRequestActionListener listener;
 
     public interface OnFriendRequestActionListener {
@@ -21,7 +21,7 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
         void onDecline(FriendRequest request, int position);
     }
 
-    public FriendRequestAdapter(List<Object> friendRequests, OnFriendRequestActionListener listener) {
+    public FriendRequestAdapter(List<FriendRequest> friendRequests, OnFriendRequestActionListener listener) {
         this.friendRequests = friendRequests;
         this.listener = listener;
     }
@@ -35,13 +35,10 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
 
     @Override
     public void onBindViewHolder(@NonNull FriendRequestViewHolder holder, int position) {
-        FriendRequest request = (FriendRequest) friendRequests.get(position);
+        FriendRequest request = friendRequests.get(position);
         holder.usernameTextView.setText(request.getUsername());
 
-        // Accept button click
         holder.acceptButton.setOnClickListener(v -> listener.onAccept(request, position));
-
-        // Decline button click
         holder.declineButton.setOnClickListener(v -> listener.onDecline(request, position));
     }
 

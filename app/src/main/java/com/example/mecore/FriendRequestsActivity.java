@@ -54,7 +54,7 @@ public class FriendRequestsActivity extends AppCompatActivity implements FriendR
 
             // Set up RecyclerView
             friendRequestsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-            adapter = new FriendRequestAdapter(Collections.singletonList(activity_friend_requests), this);
+            adapter = new FriendRequestAdapter(Collections.singletonList((FriendRequest) activity_friend_requests), this);
             friendRequestsRecyclerView.setAdapter(adapter);
             Log.d(TAG, "onCreate: RecyclerView set up");
 
@@ -85,7 +85,6 @@ public class FriendRequestsActivity extends AppCompatActivity implements FriendR
                             String senderId = doc.getString("friendId");
                             if (senderId == null) continue;
 
-                            // Fetch the sender's username
                             db.collection("users").document(senderId).get()
                                     .addOnSuccessListener(userDoc -> {
                                         if (userDoc.exists()) {
@@ -119,7 +118,6 @@ public class FriendRequestsActivity extends AppCompatActivity implements FriendR
         String currentUserId = Objects.requireNonNull(mAuth.getCurrentUser()).getUid();
         String senderId = friendRequest.getSenderId();
 
-        // Update the status to "accepted" for the current user
         Map<String, Object> updateData = new HashMap<>();
         updateData.put("status", "accepted");
 
@@ -128,28 +126,24 @@ public class FriendRequestsActivity extends AppCompatActivity implements FriendR
                 .collection("friends")
                 .document(friendRequest.getRequestId())
                 .update(updateData)
-                .addOnSuccessListener(aVoid -> {
-                    // Update the status to "accepted" for the sender
-                    db.collection("users")
-                            .document(senderId)
-                            .collection("friends")
-                            .whereEqualTo("friendId", currentUserId)
-                            .whereEqualTo("status", "pending")
-                            .get()
-                            .addOnSuccessListener(querySnapshot -> {
-                                for (QueryDocumentSnapshot doc : querySnapshot) {
-                                    doc.getReference().update("status", "accepted");
-                                }
-                                // Remove the request from the list
-                                activity_friend_requests.remove(position);
-                                runOnUiThread(() -> adapter.notifyItemRemoved(position));
-                                Toast.makeText(this, "Friend request accepted", Toast.LENGTH_SHORT).show();
-                            })
-                            .addOnFailureListener(e -> {
-                                Log.e(TAG, "onAccept: Failed to update sender's status: " + e.getMessage());
-                                Toast.makeText(this, "Failed to update sender's status: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                            });
-                })
+                .addOnSuccessListener(aVoid -> db.collection("users")
+                        .document(senderId)
+                        .collection("friends")
+                        .whereEqualTo("friendId", currentUserId)
+                        .whereEqualTo("status", "pending")
+                        .get()
+                        .addOnSuccessListener(querySnapshot -> {
+                            for (QueryDocumentSnapshot doc : querySnapshot) {
+                                doc.getReference().update("status", "accepted");
+                            }
+                            activity_friend_requests.remove(position);
+                            runOnUiThread(() -> adapter.notifyItemRemoved(position));
+                            Toast.makeText(this, "Friend request accepted", Toast.LENGTH_SHORT).show();
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e(TAG, "onAccept: Failed to update sender's status: " + e.getMessage());
+                            Toast.makeText(this, "Failed to update sender's status: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        }))
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "onAccept: Failed to accept friend request: " + e.getMessage());
                     Toast.makeText(this, "Failed to accept friend request: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -161,7 +155,6 @@ public class FriendRequestsActivity extends AppCompatActivity implements FriendR
         String currentUserId = Objects.requireNonNull(mAuth.getCurrentUser()).getUid();
         String senderId = friendRequest.getSenderId();
 
-        // Update the status to "declined" for the current user
         Map<String, Object> updateData = new HashMap<>();
         updateData.put("status", "declined");
 
@@ -170,28 +163,24 @@ public class FriendRequestsActivity extends AppCompatActivity implements FriendR
                 .collection("friends")
                 .document(friendRequest.getRequestId())
                 .update(updateData)
-                .addOnSuccessListener(aVoid -> {
-                    // Update the status to "declined" for the sender
-                    db.collection("users")
-                            .document(senderId)
-                            .collection("friends")
-                            .whereEqualTo("friendId", currentUserId)
-                            .whereEqualTo("status", "pending")
-                            .get()
-                            .addOnSuccessListener(querySnapshot -> {
-                                for (QueryDocumentSnapshot doc : querySnapshot) {
-                                    doc.getReference().update("status", "declined");
-                                }
-                                // Remove the request from the list
-                                activity_friend_requests.remove(position);
-                                runOnUiThread(() -> adapter.notifyItemRemoved(position));
-                                Toast.makeText(this, "Friend request declined", Toast.LENGTH_SHORT).show();
-                            })
-                            .addOnFailureListener(e -> {
-                                Log.e(TAG, "onDecline: Failed to update sender's status: " + e.getMessage());
-                                Toast.makeText(this, "Failed to update sender's status: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                            });
-                })
+                .addOnSuccessListener(aVoid -> db.collection("users")
+                        .document(senderId)
+                        .collection("friends")
+                        .whereEqualTo("friendId", currentUserId)
+                        .whereEqualTo("status", "pending")
+                        .get()
+                        .addOnSuccessListener(querySnapshot -> {
+                            for (QueryDocumentSnapshot doc : querySnapshot) {
+                                doc.getReference().update("status", "declined");
+                            }
+                            activity_friend_requests.remove(position);
+                            runOnUiThread(() -> adapter.notifyItemRemoved(position));
+                            Toast.makeText(this, "Friend request declined", Toast.LENGTH_SHORT).show();
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e(TAG, "onDecline: Failed to update sender's status: " + e.getMessage());
+                            Toast.makeText(this, "Failed to update sender's status: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        }))
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "onDecline: Failed to decline friend request: " + e.getMessage());
                     Toast.makeText(this, "Failed to decline friend request: " + e.getMessage(), Toast.LENGTH_LONG).show();
