@@ -6,14 +6,17 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.util.Objects;
 
 public class LoginActivity extends AppCompatActivity {
 
-    private EditText mEmail, mPassword;
+    private EditText emailEditText, passwordEditText;
     private FirebaseAuth mAuth;
 
     @Override
@@ -23,46 +26,47 @@ public class LoginActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
 
-        // Check if the user is already logged in
-        if (mAuth.getCurrentUser() != null) {
-            // User is already logged in, skip login screen
+        // Redirect verified users to the main app
+        if (mAuth.getCurrentUser() != null && mAuth.getCurrentUser().isEmailVerified()) {
             startActivity(new Intent(LoginActivity.this, GameSelectingActivity.class));
             finish();
         }
 
-        mEmail = findViewById(R.id.editTextEmail);
-        mPassword = findViewById(R.id.editTextPassword);
-        Button mLoginBtn = findViewById(R.id.buttonLogin);
+        emailEditText = findViewById(R.id.editTextEmail);
+        passwordEditText = findViewById(R.id.editTextPassword);
+        Button loginButton = findViewById(R.id.buttonLogin);
         TextView registerTextView = findViewById(R.id.textRegister);
         TextView forgotPasswordTextView = findViewById(R.id.textResetPassword);
 
-        // "Don't have an account? Register!"
         registerTextView.setOnClickListener(v -> {
             startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
             finish();
         });
 
-        // "Forgot password? Reset password"
         forgotPasswordTextView.setOnClickListener(v -> startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class)));
 
-        // Login button click
-        mLoginBtn.setOnClickListener(v -> {
-            String email = mEmail.getText().toString().trim();
-            String password = mPassword.getText().toString().trim();
+        loginButton.setOnClickListener(v -> {
+            String email = emailEditText.getText().toString().trim();
+            String password = passwordEditText.getText().toString().trim();
 
             if (email.isEmpty() || password.isEmpty()) {
-                Toast.makeText(LoginActivity.this, "Please fill in all fields", Toast.LENGTH_SHORT).show();
+                Toast.makeText(LoginActivity.this, "Enter email and password", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             mAuth.signInWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(LoginActivity.this, task -> {
+                    .addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
-                            Toast.makeText(LoginActivity.this, "Login Successful", Toast.LENGTH_SHORT).show();
-                            startActivity(new Intent(LoginActivity.this, GameSelectingActivity.class)); // Move to the next screen
-                            finish();
+                            FirebaseUser user = mAuth.getCurrentUser();
+                            if (user != null && user.isEmailVerified()) {
+                                startActivity(new Intent(LoginActivity.this, GameSelectingActivity.class));
+                                finish();
+                            } else {
+                                Toast.makeText(LoginActivity.this, "Please verify your email before logging in.", Toast.LENGTH_LONG).show();
+                                FirebaseAuth.getInstance().signOut(); // Sign out unverified users
+                            }
                         } else {
-                            Toast.makeText(LoginActivity.this, "Login Failed: " + Objects.requireNonNull(task.getException()).getMessage(), Toast.LENGTH_LONG).show();
+                            Toast.makeText(LoginActivity.this, "Login failed: " + Objects.requireNonNull(task.getException()).getMessage(), Toast.LENGTH_SHORT).show();
                         }
                     });
         });

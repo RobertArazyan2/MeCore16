@@ -8,16 +8,19 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
+
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-import com.bumptech.glide.Glide; // Fixed Glide import
+
+import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -29,6 +32,7 @@ public class ProfileActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private FirebaseStorage storage;
+    private String currentUsername; // To store the current username
     private final ActivityResultLauncher<Intent> imagePickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
@@ -74,20 +78,23 @@ public class ProfileActivity extends AppCompatActivity {
         DocumentReference userRef = db.collection("users").document(user.getUid());
         userRef.get().addOnSuccessListener(documentSnapshot -> {
             if (documentSnapshot.exists()) {
-                String username = documentSnapshot.getString("username");
+                currentUsername = documentSnapshot.getString("username"); // Store the current username
                 String profileImageUrl = documentSnapshot.getString("profileImageUrl");
-                usernameEditText.setText(username);
+                usernameEditText.setText(currentUsername);
 
                 if (profileImageUrl != null && !profileImageUrl.isEmpty()) {
                     Glide.with(this).load(profileImageUrl).into(profileImageView);
                 }
             }
-        }).addOnFailureListener(e -> Toast.makeText(this, "Failed to load profile", Toast.LENGTH_SHORT).show());
+        }).addOnFailureListener(e -> Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
     private void saveUserProfile() {
         FirebaseUser user = mAuth.getCurrentUser();
-        if (user == null) return;
+        if (user == null) {
+            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         String newUsername = usernameEditText.getText().toString().trim();
         if (newUsername.isEmpty()) {
@@ -95,12 +102,58 @@ public class ProfileActivity extends AppCompatActivity {
             return;
         }
 
-        Map<String, Object> userData = new HashMap<>();
-        userData.put("username", newUsername);
+        if (newUsername.length() < 3) {
+            Toast.makeText(this, "Username must be at least 3 characters", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        db.collection("users").document(user.getUid()).update(userData)
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Profile updated!", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(this, "Update failed!", Toast.LENGTH_SHORT).show());
+        // Check if the username has changed
+        if (newUsername.equals(currentUsername)) {
+            Toast.makeText(this, "No changes to username", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Check if the new username is already taken
+        db.collection("usernames").document(newUsername).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Toast.makeText(this, "Username already taken, please choose a different one", Toast.LENGTH_LONG).show();
+                    } else {
+                        // Username is available, proceed with the update
+                        updateUsername(user.getUid(), newUsername);
+                    }
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to check username availability: " + e.getMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    private void updateUsername(String userId, String newUsername) {
+        // Use a batch write to update both the users and usernames collections atomically
+        db.runBatch(batch -> {
+            // Update the users collection
+            Map<String, Object> userData = new HashMap<>();
+            userData.put("username", newUsername);
+            batch.update(db.collection("users").document(userId), userData);
+
+            // Delete the old username entry from usernames collection
+            if (currentUsername != null && !currentUsername.isEmpty()) {
+                batch.delete(db.collection("usernames").document(currentUsername));
+            }
+
+            // Create a new username entry in usernames collection
+            Map<String, Object> usernameData = new HashMap<>();
+            usernameData.put("userId", userId);
+            batch.set(db.collection("usernames").document(newUsername), usernameData);
+        }).addOnSuccessListener(aVoid -> {
+            currentUsername = newUsername; // Update the current username
+            Toast.makeText(this, "Profile updated!", Toast.LENGTH_SHORT).show();
+        }).addOnFailureListener(e -> {
+            String errorMessage = e.getMessage();
+            if (errorMessage != null && errorMessage.contains("PERMISSION_DENIED")) {
+                Toast.makeText(this, "Failed to update profile: Permission denied", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "Failed to update profile: " + errorMessage, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private void openFileChooser() {

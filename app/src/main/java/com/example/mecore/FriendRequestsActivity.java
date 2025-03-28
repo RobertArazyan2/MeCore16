@@ -1,6 +1,7 @@
 package com.example.mecore;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
@@ -9,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -44,6 +46,60 @@ public class FriendRequestsActivity extends AppCompatActivity implements FriendR
             db = FirebaseFirestore.getInstance();
             Log.d(TAG, "onCreate: Firebase initialized");
 
+            // Set up BottomNavigationView
+            BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
+            bottomNavigationView.setSelectedItemId(R.id.navigation_friends);
+            bottomNavigationView.setOnItemSelectedListener(item -> {
+                int itemId = item.getItemId();
+                String itemName;
+                try {
+                    itemName = getResources().getResourceEntryName(itemId);
+                } catch (Exception e) {
+                    itemName = "Unknown";
+                }
+                Log.d("BottomNav", "Clicked ID: " + itemId + ", Resource: " + itemName);
+
+                if (itemId == R.id.navigation_friends) {
+                    Log.d("BottomNav", "Already on FriendRequestsActivity (navigation_friends)");
+                    return true;
+                } else if (itemId == R.id.navigation_main) {
+                    Log.d("BottomNav", "Opening MainActivity");
+                    try {
+                        Intent intent = new Intent(FriendRequestsActivity.this, MainActivity.class);
+                        startActivity(intent);
+                        Log.d("BottomNav", "MainActivity started successfully");
+                    } catch (Exception e) {
+                        Log.e("BottomNav", "Failed to start MainActivity: " + e.getMessage(), e);
+                        Toast.makeText(this, "Failed to open Main: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                    return true;
+                } else if (itemId == R.id.navigation_chat) {
+                    Log.d("BottomNav", "Opening ChatListActivity");
+                    try {
+                        Intent intent = new Intent(FriendRequestsActivity.this, ChatListActivity.class);
+                        startActivity(intent);
+                        Log.d("BottomNav", "ChatListActivity started successfully");
+                    } catch (Exception e) {
+                        Log.e("BottomNav", "Failed to start ChatListActivity: " + e.getMessage(), e);
+                        Toast.makeText(this, "Failed to open Chat: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                    return true;
+                } else if (itemId == R.id.navigation_profile) {
+                    Log.d("BottomNav", "Opening ProfileActivity");
+                    try {
+                        Intent intent = new Intent(FriendRequestsActivity.this, ProfileActivity.class);
+                        startActivity(intent);
+                        Log.d("BottomNav", "ProfileActivity started successfully");
+                    } catch (Exception e) {
+                        Log.e("BottomNav", "Failed to start ProfileActivity: " + e.getMessage(), e);
+                        Toast.makeText(this, "Failed to open Profile: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                    return true;
+                }
+                Log.w("BottomNav", "Unknown item ID: " + itemId);
+                return false;
+            });
+
             if (mAuth.getCurrentUser() == null) {
                 Log.w(TAG, "onCreate: User not logged in");
                 Toast.makeText(this, "User not logged in!", Toast.LENGTH_LONG).show();
@@ -54,7 +110,7 @@ public class FriendRequestsActivity extends AppCompatActivity implements FriendR
 
             // Set up RecyclerView
             friendRequestsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-            adapter = new FriendRequestAdapter(Collections.singletonList((FriendRequest) activity_friend_requests), this);
+            adapter = new FriendRequestAdapter(activity_friend_requests, this);
             friendRequestsRecyclerView.setAdapter(adapter);
             Log.d(TAG, "onCreate: RecyclerView set up");
 
@@ -85,6 +141,8 @@ public class FriendRequestsActivity extends AppCompatActivity implements FriendR
                             String senderId = doc.getString("friendId");
                             if (senderId == null) continue;
 
+                            Log.d(TAG, "Found pending friend request: " + requestId + " from " + senderId);
+
                             db.collection("users").document(senderId).get()
                                     .addOnSuccessListener(userDoc -> {
                                         if (userDoc.exists()) {
@@ -96,7 +154,7 @@ public class FriendRequestsActivity extends AppCompatActivity implements FriendR
                                             }
                                         }
                                     })
-                                    .addOnFailureListener(e -> Log.e(TAG, "loadFriendRequests: Failed to load user " + senderId + ": " + e.getMessage()));
+                                    .addOnFailureListener(e -> Log.e(TAG, "Failed to load user " + senderId + ": " + e.getMessage()));
                         }
                         runOnUiThread(() -> {
                             if (activity_friend_requests.isEmpty()) {

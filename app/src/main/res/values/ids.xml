@@ -55,4 +55,5 @@
     <id name="friendUsernameTextView" />
     <item name="friendRequestsRecyclerView" type="id" />
     <item name="navigation_chat" type="id" />
+    <item name="gamesTextView" type="id" />
 </resources>
