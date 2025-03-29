@@ -1,50 +1,59 @@
 package com.example.mecore;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
+import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.Locale;
 
 public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.MessageViewHolder> {
-
+    private static final String TAG = "ChatAdapter";
     private final List<Message> messageList;
-    private String currentUserId;
 
-    public ChatAdapter(List<Message> messageList, String currentUserId) {
+    public ChatAdapter(List<Message> messageList) {
         this.messageList = messageList;
-        this.currentUserId = this.currentUserId;
     }
 
     @NonNull
     @Override
     public MessageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_message, parent, false);
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_message, parent, false);
         return new MessageViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull MessageViewHolder holder, int position) {
         Message message = messageList.get(position);
-        holder.messageTextView.setText(message.getMessage());
-
-        // Align message based on sender
-        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) holder.messageContainer.getLayoutParams();
-        if (message.getSenderId().equals(currentUserId)) {
-            // Sent by current user: align to the right
-            params.gravity = android.view.Gravity.END;
-            holder.messageContainer.setBackgroundResource(android.R.color.holo_blue_light); // Example color for sent messages
-        } else {
-            // Received from friend: align to the left
-            params.gravity = android.view.Gravity.START;
-            holder.messageContainer.setBackgroundResource(android.R.color.darker_gray); // Example color for received messages
+        if (message == null) {
+            Log.e(TAG, "Message at position " + position + " is null");
+            return;
         }
-        holder.messageContainer.setLayoutParams(params);
+
+        // Set message text
+        if (holder.messageText != null) {
+            holder.messageText.setText(message.getText() != null ? message.getText() : "");
+        } else {
+            Log.e(TAG, "messageText TextView is null at position " + position);
+        }
+
+        // Set timestamp
+        if (holder.timestampText != null) {
+            if (message.getTimestamp() != null) {
+                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                String timeString = sdf.format(message.getTimestamp().toDate());
+                holder.timestampText.setText(timeString);
+            } else {
+                holder.timestampText.setText("");
+            }
+        } else {
+            Log.e(TAG, "timestampText TextView is null at position " + position);
+        }
     }
 
     @Override
@@ -52,14 +61,22 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.MessageViewHol
         return messageList.size();
     }
 
-    public static class MessageViewHolder extends RecyclerView.ViewHolder {
-        TextView messageTextView;
-        LinearLayout messageContainer;
+    static class MessageViewHolder extends RecyclerView.ViewHolder {
+        TextView messageText;
+        TextView timestampText;
 
-        public MessageViewHolder(@NonNull View itemView) {
+        MessageViewHolder(@NonNull View itemView) {
             super(itemView);
-            messageTextView = itemView.findViewById(R.id.messageTextView);
-            messageContainer = itemView.findViewById(R.id.messageContainer);
+            messageText = itemView.findViewById(R.id.messageText);
+            timestampText = itemView.findViewById(R.id.timestampText);
+
+            // Log if views are null
+            if (messageText == null) {
+                Log.e(TAG, "messageText not found in itemView");
+            }
+            if (timestampText == null) {
+                Log.e(TAG, "timestampText not found in itemView");
+            }
         }
     }
 }

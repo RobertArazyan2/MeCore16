@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/navigation_friends"
-        android:icon="@drawable/friends_logo"
-        android:title="@string/friends" />
-    <item
         android:id="@+id/navigation_main"
         android:icon="@android:drawable/ic_menu_search"
         android:title="@string/main" />

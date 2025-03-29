@@ -1,27 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/messageTextView"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="4dp">
-
-    <!-- Message Container -->
-    <LinearLayout
-        android:id="@+id/messageContainer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:padding="8dp"
-        android:background="@android:color/darker_gray"
-        android:layout_margin="4dp"
-        tools:ignore="UselessParent">
-
-        <TextView
-            android:id="@+id/messageTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:textColor="@android:color/white" />
-    </LinearLayout>
-
-</LinearLayout>
+    android:padding="8dp"
+    android:textSize="16sp"
+    android:background="@android:color/darker_gray"
+    android:layout_margin="4dp"/>

@@ -53,9 +53,12 @@
     <id name="chatListRecyclerView" />
     <id name="usernameTextView" />
     <id name="friendUsernameTextView" />
-    <item name="friendRequestsRecyclerView" type="id" />
-    <item name="navigation_chat" type="id" />
-    <item name="gamesTextView" type="id" />
-    <item name="statusTextView" type="id" />
-    <item name="rejectButton" type="id" />
+    <id name="friendRequestsRecyclerView" />
+    <id name="navigation_chat" />
+    <id name="gamesTextView" />
+    <id name="statusTextView" />
+    <id name="rejectButton" />
+    <id name="chatNowButton"/>
+    <item name="chatTitle" type="id" />
+    <item name="back_btn" type="id" />
 </resources>

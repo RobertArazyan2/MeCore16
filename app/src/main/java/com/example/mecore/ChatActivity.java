@@ -3,11 +3,12 @@ package com.example.mecore;
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -15,144 +16,221 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class ChatActivity extends AppCompatActivity {
-
     private static final String TAG = "ChatActivity";
-    private RecyclerView recyclerView;
-    private EditText messageInput;
-
-    private List<Message> messageList;
-    private ChatAdapter chatAdapter;
-    private FirebaseFirestore db;
     private String chatId;
-    private String friendId;
-    private String currentUserId;
-    private final ExecutorService executorService = Executors.newFixedThreadPool(2);
+    private List<Message> messageList;
+    private ChatAdapter adapter;
+    private FirebaseFirestore db;
+    private FirebaseAuth auth;
+    private ListenerRegistration messageListener;
 
-    @SuppressLint({"NotifyDataSetChanged", "MissingInflatedId", "SetTextI18n"})
+    private EditText messageInput;
+    private RecyclerView recyclerView;
+
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
-        // Initialize views
-        recyclerView = findViewById(R.id.recyclerView);
-        messageInput = findViewById(R.id.messageInput);
-        Button sendButton = findViewById(R.id.sendButton);
-        TextView friendUsernameTextView = findViewById(R.id.friendUsernameTextView);
-
         // Initialize Firebase
-        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+        auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
-        currentUserId = Objects.requireNonNull(mAuth.getCurrentUser()).getUid();
 
-        // Get data from Intent
-        chatId = getIntent().getStringExtra("chatId");
-        friendId = getIntent().getStringExtra("friendId");
-        String friendUsername = getIntent().getStringExtra("friendUsername");
+        // Sign in anonymously if the user isn't signed in
+        if (auth.getCurrentUser() == null) {
+            auth.signInAnonymously()
+                    .addOnCompleteListener(this, task -> {
+                        if (task.isSuccessful()) {
+                            Toast.makeText(this, "Signed in anonymously", Toast.LENGTH_SHORT).show();
+                            initializeChat();
+                        } else {
+                            Toast.makeText(this, "Anonymous sign-in failed", Toast.LENGTH_SHORT).show();
+                            finish();
+                        }
+                    });
+        } else {
+            initializeChat();
+        }
+    }
 
-        if (chatId == null || friendId == null || friendUsername == null) {
-            Toast.makeText(this, "Error: Missing chat information", Toast.LENGTH_LONG).show();
+    @SuppressLint("SetTextI18n")
+    private void initializeChat() {
+        // Get the recipient's user ID and username from the Intent
+        String recipientId = getIntent().getStringExtra("recipientId");
+        String otherUsername = getIntent().getStringExtra("otherUsername");
+
+        if (recipientId == null) {
+            Toast.makeText(this, "Unable to start chat: Missing recipient ID", Toast.LENGTH_LONG).show();
             finish();
             return;
         }
 
-        // Set the friend's username in the header
-        friendUsernameTextView.setText("Chatting with " + friendUsername);
+        // Construct the chatId (e.g., user1_user2)
+        String currentUserId = Objects.requireNonNull(auth.getCurrentUser()).getUid();
+        chatId = createChatId(currentUserId, recipientId);
 
-        // Initialize the message list and adapter
+        // Initialize UI
+        messageInput = findViewById(R.id.messageEditText);
+        ImageButton sendMessageBtn = findViewById(R.id.sendButton);
+        ImageButton backBtn = findViewById(R.id.back_btn);
+        TextView otherUsernameTextView = findViewById(R.id.chatTitle);
+        recyclerView = findViewById(R.id.chat_recycler_view);
+
+        // Set the other user's username
+        if (otherUsername != null) {
+            otherUsernameTextView.setText("Chat with " + otherUsername);
+        }
+
+        // Set up back button
+        backBtn.setOnClickListener(v -> onBackPressed());
+
+        // Initialize message list and adapter
         messageList = new ArrayList<>();
-        chatAdapter = new ChatAdapter(messageList, currentUserId);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.setAdapter(chatAdapter);
+        adapter = new ChatAdapter(messageList);
+        LinearLayoutManager manager = new LinearLayoutManager(this);
+        manager.setReverseLayout(true); // Show newest messages at the bottom
+        recyclerView.setLayoutManager(manager);
+        recyclerView.setAdapter(adapter);
 
-        // Load chat history from Firestore
-        loadChatHistory();
-
-        // Set click listener for the send button
-        sendButton.setOnClickListener(v -> {
+        // Send message
+        sendMessageBtn.setOnClickListener(v -> {
             String messageText = messageInput.getText().toString().trim();
             if (!messageText.isEmpty()) {
                 sendMessage(messageText);
-                messageInput.setText(""); // Clear the input field
+            }
+        });
+
+        // Listen for messages
+        setupChatRecyclerView();
+    }
+
+    private String createChatId(String user1, String user2) {
+        // Sort the user IDs to ensure consistency (e.g., user1_user2 or user2_user1)
+        List<String> userIds = Arrays.asList(user1, user2);
+        userIds.sort(String::compareTo);
+        return userIds.get(0) + "_" + userIds.get(1);
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    private void setupChatRecyclerView() {
+        Query query = db.collection("chats").document(chatId).collection("messages")
+                .orderBy("timestamp", Query.Direction.DESCENDING);
+
+        messageListener = query.addSnapshotListener((querySnapshot, e) -> {
+            if (e != null) {
+                Log.e(TAG, "Listen failed: " + e.getMessage(), e);
+                Toast.makeText(this, "Failed to load messages: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (querySnapshot != null) {
+                messageList.clear();
+                for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot) {
+                    try {
+                        Message message = doc.toObject(Message.class);
+                        if (message != null) {
+                            messageList.add(message);
+                        }
+                    } catch (Exception ex) {
+                        Log.e(TAG, "Failed to deserialize message: " + doc.getId(), ex);
+                    }
+                }
+                adapter.notifyDataSetChanged();
+                recyclerView.smoothScrollToPosition(0); // Scroll to the newest message
             }
         });
     }
 
-    @SuppressLint("NotifyDataSetChanged")
-    private void loadChatHistory() {
-        executorService.execute(() -> db.collection("chats")
-                .document(chatId)
-                .collection("messages")
-                .orderBy("timestamp", Query.Direction.ASCENDING)
-                .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        messageList.clear();
-                        for (QueryDocumentSnapshot doc : task.getResult()) {
-                            Message message = doc.toObject(Message.class);
-                            messageList.add(message);
-                        }
-                        runOnUiThread(() -> {
-                            chatAdapter.notifyDataSetChanged();
-                            if (!messageList.isEmpty()) {
-                                recyclerView.scrollToPosition(messageList.size() - 1);
-                            }
-                        });
-                    } else {
-                        String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error";
-                        Log.e(TAG, "loadChatHistory: Failed to load messages: " + errorMessage);
-                        runOnUiThread(() -> Toast.makeText(this, "Failed to load messages: " + errorMessage, Toast.LENGTH_LONG).show());
-                    }
-                }));
+    private void sendMessage(String messageText) {
+        Timestamp timestamp = Timestamp.now();
+        Message message = new Message(messageText, timestamp);
+        message.setSenderId(Objects.requireNonNull(auth.getCurrentUser()).getUid());
+
+        db.collection("chats").document(chatId).collection("messages")
+                .add(message)
+                .addOnSuccessListener(documentReference -> {
+                    messageInput.setText("");
+                    sendNotification(messageText);
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to send message: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
-    private void sendMessage(String messageText) {
-        // Create a new message object
-        Message message = new Message(
-                currentUserId,
-                friendId,
-                messageText,
-                Timestamp.now()
-        );
+    private void sendNotification(String message) {
+        // Placeholder: You'll need the recipient's FCM token
+        String recipientFcmToken = "RECIPIENT_FCM_TOKEN"; // Replace with actual token
 
-        // Add the message to the local list for immediate display
-        messageList.add(message);
-        chatAdapter.notifyItemInserted(messageList.size() - 1);
-        recyclerView.scrollToPosition(messageList.size() - 1);
+        try {
+            JSONObject jsonObject = new JSONObject();
+            JSONObject notificationObj = new JSONObject();
+            notificationObj.put("title", "New Message");
+            notificationObj.put("body", message);
 
-        // Save the message to Firestore
-        Map<String, Object> messageData = new HashMap<>();
-        messageData.put("senderId", message.getSenderId());
-        messageData.put("receiverId", message.getReceiverId());
-        messageData.put("message", message.getMessage());
-        messageData.put("timestamp", message.getTimestamp());
+            JSONObject dataObj = new JSONObject();
+            dataObj.put("userId", Objects.requireNonNull(auth.getCurrentUser()).getUid());
 
-        db.collection("chats")
-                .document(chatId)
-                .collection("messages")
-                .add(messageData)
-                .addOnSuccessListener(documentReference -> Log.d(TAG, "sendMessage: Message sent successfully: " + documentReference.getId()))
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "sendMessage: Failed to send message: " + e.getMessage());
-                    runOnUiThread(() -> Toast.makeText(this, "Failed to send message: " + e.getMessage(), Toast.LENGTH_LONG).show());
-                });
+            jsonObject.put("notification", notificationObj);
+            jsonObject.put("data", dataObj);
+            jsonObject.put("to", recipientFcmToken);
+
+            callApi(jsonObject);
+        } catch (Exception e) {
+            Toast.makeText(this, "Failed to send notification: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void callApi(JSONObject jsonObject) {
+        MediaType JSON = MediaType.get("application/json; charset=utf-8");
+        OkHttpClient client = new OkHttpClient();
+        String url = "https://fcm.googleapis.com/fcm/send";
+        RequestBody body = RequestBody.create(jsonObject.toString(), JSON);
+        Request request = new Request.Builder()
+                .url(url)
+                .post(body)
+                .header("Authorization", "Bearer YOUR_FCM_SERVER_KEY") // Replace with your FCM server key
+                .build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                runOnUiThread(() -> Toast.makeText(ChatActivity.this, "Failed to send notification: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                String responseMessage = response.message();
+                if (response.isSuccessful()) {
+                    runOnUiThread(() -> Toast.makeText(ChatActivity.this, "Notification sent", Toast.LENGTH_SHORT).show());
+                } else {
+                    runOnUiThread(() -> Toast.makeText(ChatActivity.this, "Notification failed: " + responseMessage, Toast.LENGTH_SHORT).show());
+                }
+            }
+        });
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        executorService.shutdown();
+        if (messageListener != null) {
+            messageListener.remove();
+        }
     }
 }

@@ -57,9 +57,9 @@
             android:exported="true">
         </activity>
         <activity
-            android:name=".FriendRequestsActivity"
-            android:exported="false" />
-
+            android:name=".ChatActivity"
+            android:exported="true">
+        </activity>
 
     </application>
 </manifest>

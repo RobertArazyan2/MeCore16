@@ -58,4 +58,13 @@
     <string name="friend_requests">Friend Requests</string>
     <string name="chat_list">Chat List</string>
     <string name="friends">Friends</string>
+    <string name="unknown_user" />
+    <string name="no_users_available" />
+    <string name="chat_now" />
+    <string name="send_message">Send message</string>
+    <string name="error_missing_user_data" />
+    <string name="chatting_with" />
+    <string name="please_enter_message" />
+    <string name="failed_to_send_message" />
+    <string name="error_loading_messages" />
 </resources>

@@ -34,18 +34,19 @@ android {
 
 dependencies {
     implementation(libs.appcompat)
-    implementation(libs.material) // Keep only one Material dependency
+    implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
 
-    implementation(platform(libs.firebase.bom)) // Place first
+    implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.database)
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage)
 
-    implementation(libs.glide) // Ensure this is correctly defined
+    implementation(libs.glide)
+    implementation (libs.squareup.okhttp)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
