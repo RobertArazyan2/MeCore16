@@ -35,6 +35,9 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.MessageViewHol
             return;
         }
 
+        // Log the message ID for debugging
+        Log.d(TAG, "Binding message with ID: " + message.getId());
+
         // Set message text
         if (holder.messageText != null) {
             holder.messageText.setText(message.getText() != null ? message.getText() : "");
@@ -64,13 +67,12 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.MessageViewHol
     static class MessageViewHolder extends RecyclerView.ViewHolder {
         TextView messageText;
         TextView timestampText;
-
         MessageViewHolder(@NonNull View itemView) {
             super(itemView);
             messageText = itemView.findViewById(R.id.messageText);
             timestampText = itemView.findViewById(R.id.timestampText);
+            // messageIdText = itemView.findViewById(R.id.messageIdText); // Uncomment if added to layout
 
-            // Log if views are null
             if (messageText == null) {
                 Log.e(TAG, "messageText not found in itemView");
             }

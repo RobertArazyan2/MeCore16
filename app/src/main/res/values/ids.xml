@@ -59,6 +59,6 @@
     <id name="statusTextView" />
     <id name="rejectButton" />
     <id name="chatNowButton"/>
-    <item name="chatTitle" type="id" />
-    <item name="back_btn" type="id" />
+    <id name="chatTitle"  />
+    <id name="back_btn" />
 </resources>

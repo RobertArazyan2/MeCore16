@@ -3,8 +3,9 @@ package com.example.mecore;
 import com.google.firebase.Timestamp;
 
 public class Message {
+    private String id; // Added field for the message ID
     private String text;
-    private Timestamp timestamp; // Changed to Timestamp
+    private Timestamp timestamp;
     private String senderId;
 
     public Message() {
@@ -14,6 +15,14 @@ public class Message {
     public Message(String text, Timestamp timestamp) {
         this.text = text;
         this.timestamp = timestamp;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getText() {

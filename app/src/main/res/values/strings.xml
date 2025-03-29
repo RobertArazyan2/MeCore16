@@ -67,4 +67,5 @@
     <string name="please_enter_message" />
     <string name="failed_to_send_message" />
     <string name="error_loading_messages" />
+    <string name="message">Message</string>
 </resources>

@@ -149,6 +149,7 @@ public class ChatActivity extends AppCompatActivity {
                     try {
                         Message message = doc.toObject(Message.class);
                         if (message != null) {
+                            message.setId(doc.getId()); // Set the Firestore document ID
                             messageList.add(message);
                         }
                     } catch (Exception ex) {
@@ -169,6 +170,10 @@ public class ChatActivity extends AppCompatActivity {
         db.collection("chats").document(chatId).collection("messages")
                 .add(message)
                 .addOnSuccessListener(documentReference -> {
+                    message.setId(documentReference.getId()); // Set the Firestore document ID
+                    messageList.add(0, message); // Add to the list for immediate UI update
+                    adapter.notifyItemInserted(0); // Notify adapter of the new message
+                    recyclerView.smoothScrollToPosition(0); // Scroll to the new message
                     messageInput.setText("");
                     sendNotification(messageText);
                 })
