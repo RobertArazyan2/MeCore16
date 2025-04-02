@@ -61,4 +61,9 @@
     <id name="chatNowButton"/>
     <id name="chatTitle"  />
     <id name="back_btn" />
+    <item name="goBackButton" type="id" />
+    <item name="chat_recycler_view" type="id" />
+    <item name="bottomNavigationView" type="id" />
+    <item name="nav_chat_list" type="id" />
+    <item name="nav_main" type="id" />
 </resources>

@@ -60,6 +60,8 @@
             android:name=".ChatActivity"
             android:exported="true">
         </activity>
+        <activity android:name=".SearchUserProfileActivity" />
+        <activity android:name=".SearchChatActivity" />
 
     </application>
 </manifest>

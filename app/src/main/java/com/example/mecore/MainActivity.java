@@ -55,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,59 +68,19 @@ public class MainActivity extends AppCompatActivity {
         searchEditText = findViewById(R.id.searchEditText);
         resultTextView = findViewById(R.id.resultTextView);
 
-        Log.d(TAG, "onCreate: Setting up BottomNavigationView");
-        BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
-        bottomNavigationView.setSelectedItemId(R.id.navigation_main);
-        bottomNavigationView.setOnItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            String itemName;
-            try {
-                itemName = getResources().getResourceEntryName(itemId);
-            } catch (Exception e) {
-                itemName = "Unknown";
-            }
-            Log.d("BottomNav", "Clicked ID: " + itemId + ", Resource: " + itemName);
+        // Set up BottomNavigationMenu
+        Log.d(TAG, "onCreate: Setting up BottomNavigationMenu");
+        BottomNavigationView bottomNavigationMenu = findViewById(R.id.bottom_navigation);
+        if (bottomNavigationMenu == null) {
+            Log.e(TAG, "BottomNavigationMenu is null! Check activity_main.xml for ID bottom_navigation");
+            Toast.makeText(this, "BottomNavigationMenu not found in layout!", Toast.LENGTH_LONG).show();
+            return;
+        } else {
+            Log.d(TAG, "BottomNavigationMenu found successfully");
+        }
 
-            if (itemId == R.id.navigation_main) {
-                Log.d("BottomNav", "Already on MainActivity (navigation_main)");
-                return true;
-            } else if (itemId == R.id.navigation_profile) {
-                Log.d("BottomNav", "Opening ProfileActivity");
-                try {
-                    Intent intent = new Intent(MainActivity.this, ProfileActivity.class);
-                    startActivity(intent);
-                    Log.d("BottomNav", "ProfileActivity started successfully");
-                } catch (Exception e) {
-                    Log.e("BottomNav", "Failed to start ProfileActivity: " + e.getMessage(), e);
-                    Toast.makeText(this, "Failed to open Profile: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                }
-                return true;
-            } else if (itemId == R.id.navigation_chat) {
-                Log.d("BottomNav", "Opening ChatListActivity");
-                try {
-                    Intent intent = new Intent(MainActivity.this, ChatListActivity.class);
-                    startActivity(intent);
-                    Log.d("BottomNav", "ChatListActivity started successfully");
-                } catch (Exception e) {
-                    Log.e("BottomNav", "Failed to start ChatListActivity: " + e.getMessage(), e);
-                    Toast.makeText(this, "Failed to open Chat: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                }
-                return true;
-            } else if (itemId == R.id.navigation_friends) {
-                Log.d("BottomNav", "Opening FriendRequestsActivity");
-                try {
-                    Intent intent = new Intent(MainActivity.this, FriendRequestsActivity.class);
-                    startActivity(intent);
-                    Log.d("BottomNav", "FriendRequestsActivity started successfully");
-                } catch (Exception e) {
-                    Log.e("BottomNav", "Failed to start FriendRequestsActivity: " + e.getMessage(), e);
-                    Toast.makeText(this, "Failed to open Friends: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                }
-                return true;
-            }
-            Log.w("BottomNav", "Unknown item ID: " + itemId);
-            return false;
-        });
+        // Use NavigationUtil to set up the BottomNavigationMenu
+        NavigationUtil.setupBottomNavigationMenu(this, bottomNavigationMenu, R.id.navigation_main);
 
         Log.d(TAG, "onCreate: Initializing Firebase");
         db = FirebaseFirestore.getInstance();
@@ -310,7 +271,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Log.d(TAG, "searchUserByUsername: Navigating to UserProfileActivity for user: " + foundUser.getUsername());
-        Intent intent = new Intent(MainActivity.this, UserProfileActivity.class);
+        Intent intent = new Intent(MainActivity.this, SearchUserProfileActivity.class);
         intent.putExtra("userId", foundUser.getUserId());
         intent.putExtra("username", foundUser.getUsername());
         userProfileLauncher.launch(intent);

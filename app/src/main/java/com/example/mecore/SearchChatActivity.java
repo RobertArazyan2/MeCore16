@@ -7,6 +7,7 @@ import android.util.Log;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -36,8 +37,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class ChatActivity extends AppCompatActivity {
-    private static final String TAG = "ChatActivity";
+public class SearchChatActivity extends AppCompatActivity {
+    private static final String TAG = "SearchChatActivity";
     private String chatId;
     private List<Message> messageList;
     private ChatAdapter adapter;
@@ -53,7 +54,7 @@ public class ChatActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_chat);
+        setContentView(R.layout.activity_chat); // Reusing the same layout as ChatActivity
 
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
@@ -62,8 +63,10 @@ public class ChatActivity extends AppCompatActivity {
             auth.signInAnonymously()
                     .addOnCompleteListener(this, task -> {
                         if (task.isSuccessful()) {
+                            Toast.makeText(this, "Signed in anonymously", Toast.LENGTH_SHORT).show();
                             initializeChat();
                         } else {
+                            Toast.makeText(this, "Anonymous sign-in failed", Toast.LENGTH_SHORT).show();
                             finish();
                         }
                     });
@@ -79,6 +82,7 @@ public class ChatActivity extends AppCompatActivity {
         String currentUsername = getIntent().getStringExtra("currentUsername");
 
         if (recipientId == null) {
+            Toast.makeText(this, "Unable to start chat: Missing recipient ID", Toast.LENGTH_LONG).show();
             finish();
             return;
         }
@@ -90,16 +94,19 @@ public class ChatActivity extends AppCompatActivity {
                         recipientFcmToken = documentSnapshot.getString("fcmToken");
                         if (recipientFcmToken == null) {
                             Log.w(TAG, "Recipient FCM token is null for user: " + recipientId);
+                            Toast.makeText(this, "Recipient hasn't set up notifications yet", Toast.LENGTH_SHORT).show();
                         } else {
                             Log.d(TAG, "Recipient FCM token fetched: " + recipientFcmToken);
                         }
                     } else {
                         Log.w(TAG, "Recipient document not found for user: " + recipientId);
+                        Toast.makeText(this, "Recipient not found in database", Toast.LENGTH_SHORT).show();
                     }
                     setupUI();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to fetch recipient FCM token: " + e.getMessage());
+                    Toast.makeText(this, "Failed to fetch recipient info: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     setupUI();
                 });
     }
@@ -122,8 +129,9 @@ public class ChatActivity extends AppCompatActivity {
             otherUsernameTextView.setText("Chat with " + otherUsername);
         }
 
+        // Navigate to SearchUserProfileActivity when back button is clicked
         backBtn.setOnClickListener(v -> {
-            Intent intent = new Intent(ChatActivity.this, SearchUserProfileActivity.class);
+            Intent intent = new Intent(SearchChatActivity.this, SearchUserProfileActivity.class);
             intent.putExtra("userId", recipientId);
             intent.putExtra("username", otherUsername);
             startActivity(intent);
@@ -162,6 +170,7 @@ public class ChatActivity extends AppCompatActivity {
         messageListener = query.addSnapshotListener((querySnapshot, e) -> {
             if (e != null) {
                 Log.e(TAG, "Listen failed: " + e.getMessage(), e);
+                Toast.makeText(this, "Failed to load messages: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 return;
             }
             if (querySnapshot != null) {
@@ -170,6 +179,7 @@ public class ChatActivity extends AppCompatActivity {
                     message.setId(dc.getDocument().getId());
                     switch (dc.getType()) {
                         case ADDED:
+                            // Check if the message already exists to avoid duplicates
                             boolean exists = false;
                             for (Message existingMessage : messageList) {
                                 if (existingMessage.getId().equals(message.getId())) {
@@ -216,10 +226,11 @@ public class ChatActivity extends AppCompatActivity {
         db.collection("chats").document(chatId).collection("messages")
                 .add(message)
                 .addOnSuccessListener(documentReference -> {
+                    // Do not add the message to messageList here; let the Firestore listener handle it
                     messageInput.setText("");
                     sendNotification(messageText);
                 })
-                .addOnFailureListener(e -> Log.e(TAG, "Failed to send message: " + e.getMessage()));
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to send message: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
     private void sendNotification(String message) {
@@ -228,6 +239,7 @@ public class ChatActivity extends AppCompatActivity {
 
         if (recipientFcmToken == null) {
             Log.w(TAG, "Skipping notification: No recipient token available");
+            Toast.makeText(this, "Recipient hasn't set up notifications yet", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -248,7 +260,7 @@ public class ChatActivity extends AppCompatActivity {
 
             callApi(jsonObject);
         } catch (Exception e) {
-            Log.e(TAG, "Failed to send notification: " + e.getMessage());
+            Toast.makeText(this, "Failed to send notification: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -260,12 +272,15 @@ public class ChatActivity extends AppCompatActivity {
         Request request = new Request.Builder()
                 .url(url)
                 .post(body)
-                .header("Authorization", "Bearer YOUR_ACTUAL_FCM_SERVER_KEY_HERE")
+                .header("Authorization", "Bearer YOUR_ACTUAL_FCM_SERVER_KEY_HERE") // Replace with your real FCM Server Key
                 .build();
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                runOnUiThread(() -> Log.e(TAG, "Notification request failed: " + e.getMessage()));
+                runOnUiThread(() -> {
+                    Log.e(TAG, "Notification request failed: " + e.getMessage());
+                    Toast.makeText(SearchChatActivity.this, "Network error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
             }
 
             @Override
@@ -273,6 +288,11 @@ public class ChatActivity extends AppCompatActivity {
                 String responseMessage = response.message();
                 String responseBody = response.body() != null ? response.body().string() : "No response body";
                 Log.d(TAG, "FCM Response: " + response.code() + " - " + responseMessage + " - " + responseBody);
+                if (response.isSuccessful()) {
+                    runOnUiThread(() -> Toast.makeText(SearchChatActivity.this, "Notification sent", Toast.LENGTH_SHORT).show());
+                } else {
+                    runOnUiThread(() -> Toast.makeText(SearchChatActivity.this, "Notification failed: " + responseBody + " (" + response.code() + ")", Toast.LENGTH_SHORT).show());
+                }
             }
         });
     }

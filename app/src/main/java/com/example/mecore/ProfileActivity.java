@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -14,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
@@ -27,6 +29,7 @@ import java.util.Objects;
 
 public class ProfileActivity extends AppCompatActivity {
 
+    private static final String TAG = "ProfileActivity";
     private EditText usernameEditText;
     private ImageView profileImageView;
     private FirebaseAuth mAuth;
@@ -59,6 +62,68 @@ public class ProfileActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
 
+        // Set up BottomNavigationMenu
+        Log.d(TAG, "onCreate: Setting up BottomNavigationMenu");
+        BottomNavigationView bottomNavigationMenu = findViewById(R.id.bottom_navigation);
+        // Add debugging to confirm BottomNavigationMenu is found
+        if (bottomNavigationMenu == null) {
+            Log.e(TAG, "BottomNavigationMenu is null! Check activity_profile.xml for ID bottom_navigation");
+            Toast.makeText(this, "BottomNavigationMenu not found in layout!", Toast.LENGTH_LONG).show();
+            return; // Exit onCreate to avoid crashes
+        } else {
+            Log.d(TAG, "BottomNavigationMenu found successfully");
+        }
+
+        bottomNavigationMenu.setSelectedItemId(R.id.navigation_profile); // Highlight "Profile" as selected
+        bottomNavigationMenu.setOnItemSelectedListener(item -> {
+            int itemId = item.getItemId();
+            String itemName;
+            try {
+                itemName = getResources().getResourceEntryName(itemId);
+                Log.d("BottomNav", "Item selected: ID=" + itemId + ", Name=" + itemName);
+            } catch (Exception e) {
+                itemName = "Unknown";
+                Log.e("BottomNav", "Failed to get resource name for ID: " + itemId, e);
+            }
+
+            if (itemId == R.id.navigation_main) {
+                Log.d("BottomNav", "Navigation Main tab clicked, opening MainActivity");
+                try {
+                    Intent intent = new Intent(ProfileActivity.this, MainActivity.class);
+                    // Pass the selected tab ID to MainActivity
+                    intent.putExtra("selectedTabId", R.id.navigation_main);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    startActivity(intent);
+                    Log.d("BottomNav", "MainActivity started successfully");
+                    finish(); // Close ProfileActivity to avoid stacking
+                } catch (Exception e) {
+                    Log.e("BottomNav", "Failed to start MainActivity: " + e.getMessage(), e);
+                    Toast.makeText(this, "Failed to open Main: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                }
+                return true;
+            } else if (itemId == R.id.navigation_profile) {
+                Log.d("BottomNav", "Already on ProfileActivity (navigation_profile)");
+                return true;
+            } else if (itemId == R.id.navigation_chat) {
+                Log.d("BottomNav", "Opening ChatListActivity");
+                try {
+                    Intent intent = new Intent(ProfileActivity.this, ChatListActivity.class);
+                    // Pass the selected tab ID to ChatListActivity
+                    intent.putExtra("selectedTabId", R.id.navigation_chat);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    startActivity(intent);
+                    Log.d("BottomNav", "ChatListActivity started successfully");
+                    finish(); // Close ProfileActivity to avoid stacking
+                } catch (Exception e) {
+                    Log.e("BottomNav", "Failed to start ChatListActivity: " + e.getMessage(), e);
+                    Toast.makeText(this, "Failed to open Chat: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                }
+                return true;
+            }
+            Log.w("BottomNav", "Unknown item ID: " + itemId);
+            return false;
+        });
+
         loadUserProfile();
 
         profileImageView.setOnClickListener(v -> openFileChooser());
@@ -73,7 +138,10 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void loadUserProfile() {
         FirebaseUser user = mAuth.getCurrentUser();
-        if (user == null) return;
+        if (user == null) {
+            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         DocumentReference userRef = db.collection("users").document(user.getUid());
         userRef.get().addOnSuccessListener(documentSnapshot -> {

@@ -1,9 +1,11 @@
 [versions]
 agp = "8.7.3"
 firebaseBom = "33.10.0"
+firebaseMessaging = "24.1.1"
 fullSdk = "4.1.1"
 glide = "4.16.0"
 googleMaterial = "1.10.0"
+googleMaterialVersion = "1.9.0"
 googleServices = "4.4.2"
 gradle = "7.4.2"
 gradleVersion = "7.4.1"
@@ -31,6 +33,7 @@ firebase-firestore-ktx = { module = "com.google.firebase:firebase-firestore-ktx"
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 full-sdk = { module = "io.agora.rtc:full-sdk", version.ref = "fullSdk" }
 glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
+google-firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebaseMessaging" }
 google-services = { module = "com.google.gms:google-services", version.ref = "googleServices" }
 gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
 gradle-v741 = { module = "com.android.tools.build:gradle", version.ref = "gradleVersion" }
@@ -43,6 +46,7 @@ activity = { group = "androidx.activity", name = "activity", version.ref = "acti
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
 material-v1100 = { module = "com.google.android.material:material", version.ref = "googleMaterial" }
+material-v190 = { module = "com.google.android.material:material", version.ref = "googleMaterialVersion" }
 material-vlatestversion = { module = "com.google.android.material:material", version.ref = "materialVersion" }
 rtm-sdk = { module = "io.agora.rtm:rtm-sdk", version.ref = "rtmSdk" }
 rtm-sdk-v150 = { module = "io.agora.rtm:rtm-sdk", version.ref = "rtmSdkVersion" }

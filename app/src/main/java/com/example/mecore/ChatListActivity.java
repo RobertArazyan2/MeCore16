@@ -1,6 +1,7 @@
 package com.example.mecore;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
@@ -9,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -35,6 +37,7 @@ public class ChatListActivity extends AppCompatActivity {
         setContentView(R.layout.activity_chat_list);
 
         @SuppressLint({"MissingInflatedId", "LocalSuppress"}) RecyclerView chatListRecyclerView = findViewById(R.id.chatListRecyclerView);
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavigationView);
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
@@ -51,6 +54,21 @@ public class ChatListActivity extends AppCompatActivity {
         adapter = new ChatListAdapter(friendsList, user -> Toast.makeText(this, "Clicked on " + user.getUsername(), Toast.LENGTH_SHORT).show());
         chatListRecyclerView.setAdapter(adapter);
         Log.d(TAG, "onCreate: RecyclerView and ChatListAdapter set up");
+
+        // Set up Bottom Navigation
+        bottomNavigationView.setSelectedItemId(R.id.nav_chat_list); // Highlight "Chats" as selected
+        bottomNavigationView.setOnItemSelectedListener(item -> {
+            int itemId = item.getItemId();
+            if (itemId == R.id.nav_chat_list) {
+                // Already in ChatListActivity, do nothing
+                return true;
+            } else if (itemId == R.id.nav_profile) {
+                startActivity(new Intent(ChatListActivity.this, ProfileActivity.class));
+                finish(); // Close ChatListActivity to prevent stacking
+                return true;
+            }
+            return false;
+        });
 
         // Load friends list
         loadFriendsList();

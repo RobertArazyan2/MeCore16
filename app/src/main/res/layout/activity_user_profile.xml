@@ -1,34 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:gravity="center"
     android:background="@color/darkgrey">
 
-    <TextView
-        android:id="@+id/userProfileUsername"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/username"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:paddingBottom="32dp"/>
-
-    <Button
-        android:id="@+id/chatNowButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Chat Now"
-        android:layout_marginBottom="16dp"
+    <!-- Go Back Button (Top-Left Corner, Custom PNG with Transparent Background) -->
+    <ImageButton
+        android:id="@+id/goBackButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:src="@drawable/ic_arrow_back"
+        android:background="@null"
+        android:scaleType="centerInside"
+        android:contentDescription="Go Back"
         tools:ignore="HardcodedText" />
 
-    <Button
-        android:id="@+id/skipButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/skip"/>
+    <!-- Existing LinearLayout for other elements -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:gravity="center">
 
-</LinearLayout>
+        <TextView
+            android:id="@+id/userProfileUsername"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/username"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:paddingBottom="32dp"/>
+
+        <Button
+            android:id="@+id/chatNowButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chat Now"
+            android:layout_marginBottom="16dp"
+            tools:ignore="HardcodedText" />
+
+        <Button
+            android:id="@+id/skipButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/skip"/>
+
+    </LinearLayout>
+
+</RelativeLayout>
