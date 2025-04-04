@@ -8,7 +8,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -73,7 +72,6 @@ public class MainActivity extends AppCompatActivity {
         BottomNavigationView bottomNavigationMenu = findViewById(R.id.bottom_navigation);
         if (bottomNavigationMenu == null) {
             Log.e(TAG, "BottomNavigationMenu is null! Check activity_main.xml for ID bottom_navigation");
-            Toast.makeText(this, "BottomNavigationMenu not found in layout!", Toast.LENGTH_LONG).show();
             return;
         } else {
             Log.d(TAG, "BottomNavigationMenu found successfully");
@@ -89,7 +87,6 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "onCreate: Checking if user is logged in");
         if (mAuth.getCurrentUser() == null) {
             Log.w(TAG, "onCreate: User not logged in");
-            Toast.makeText(this, "User not logged in!", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -99,16 +96,12 @@ public class MainActivity extends AppCompatActivity {
         loadAllUsers();
 
         Log.d(TAG, "onCreate: Setting up findUserButton click listener");
-        findUserButton.setOnClickListener(v -> {
-            Toast.makeText(MainActivity.this, "Finding user...", Toast.LENGTH_SHORT).show();
-            findMatchingUser();
-        });
+        findUserButton.setOnClickListener(v -> findMatchingUser());
 
         Log.d(TAG, "onCreate: Setting up searchUserButton click listener");
         searchUserButton.setOnClickListener(v -> {
             String searchUsername = searchEditText.getText().toString().trim();
             if (searchUsername.isEmpty()) {
-                Toast.makeText(MainActivity.this, "Please enter a username to search", Toast.LENGTH_SHORT).show();
                 return;
             }
             searchUserByUsername(searchUsername);
@@ -127,18 +120,15 @@ public class MainActivity extends AppCompatActivity {
                             selectedGames = parseGameList(gamesObject);
                             isGamesLoaded = true;
                             runOnUiThread(() -> {
-                                Toast.makeText(this, "Games loaded: " + selectedGames.size(), Toast.LENGTH_SHORT).show();
                                 Log.d(TAG, "loadSelectedGames: Games loaded: " + selectedGames.size());
                                 checkIfReady();
                             });
                         } else {
                             Log.w(TAG, "loadSelectedGames: User document does not exist for userId: " + userId);
-                            runOnUiThread(() -> Toast.makeText(this, "User document does not exist for userId: " + userId, Toast.LENGTH_LONG).show());
                         }
                     } else {
                         String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error";
                         Log.e(TAG, "loadSelectedGames: Error loading games: " + errorMessage);
-                        runOnUiThread(() -> Toast.makeText(this, "Error loading games: " + errorMessage, Toast.LENGTH_LONG).show());
                     }
                 }));
     }
@@ -170,14 +160,12 @@ public class MainActivity extends AppCompatActivity {
                         }
                         int finalSkippedUsersCount = skippedUsersCount;
                         runOnUiThread(() -> {
-                            Toast.makeText(this, "Loaded " + allUsers.size() + " users. Total: " + totalUsers + ", Skipped: " + finalSkippedUsersCount, Toast.LENGTH_LONG).show();
                             Log.d(TAG, "loadAllUsers: Loaded " + allUsers.size() + " users. Total: " + totalUsers + ", Skipped: " + finalSkippedUsersCount);
                             checkIfReady();
                         });
                     } else {
                         String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error";
                         Log.e(TAG, "loadAllUsers: Load failed: " + errorMessage);
-                        runOnUiThread(() -> Toast.makeText(this, "Load failed: " + errorMessage, Toast.LENGTH_LONG).show());
                     }
                 }));
     }
@@ -252,7 +240,6 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "searchUserByUsername: Searching for username: " + searchUsername);
         if (allUsers.isEmpty()) {
             Log.w(TAG, "searchUserByUsername: No users loaded");
-            Toast.makeText(this, "No users loaded", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -266,7 +253,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (foundUser == null) {
             Log.w(TAG, "searchUserByUsername: User not found: " + searchUsername);
-            Toast.makeText(this, "User not found: " + searchUsername, Toast.LENGTH_LONG).show();
             return;
         }
 

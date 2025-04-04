@@ -8,6 +8,7 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -23,19 +24,26 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ProfileActivity extends AppCompatActivity {
 
     private static final String TAG = "ProfileActivity";
     private EditText usernameEditText;
     private ImageView profileImageView;
+    private TextView selectedGamesTextView;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private FirebaseStorage storage;
-    private String currentUsername; // To store the current username
+    private String currentUsername;
+    private List<String> selectedGames;
+    private final ExecutorService executorService = Executors.newFixedThreadPool(2);
     private final ActivityResultLauncher<Intent> imagePickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
@@ -47,6 +55,18 @@ public class ProfileActivity extends AppCompatActivity {
                     }
                 }
             });
+    private final ActivityResultLauncher<Intent> gameSelectionLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    selectedGames = result.getData().getStringArrayListExtra("updatedGames");
+                    if (selectedGamesTextView != null) {
+                        selectedGamesTextView.setText("Selected Games: " + (selectedGames.isEmpty() ? "None" : String.join(", ", selectedGames)));
+                    } else {
+                        Log.e(TAG, "selectedGamesTextView is null in gameSelectionLauncher");
+                    }
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,9 +74,15 @@ public class ProfileActivity extends AppCompatActivity {
         setContentView(R.layout.activity_profile);
 
         usernameEditText = findViewById(R.id.editTextUsername);
+        selectedGamesTextView = findViewById(R.id.selectedGamesTextView);
         Button saveButton = findViewById(R.id.buttonSave);
         Button changeGamesButton = findViewById(R.id.buttonChangeGames);
         profileImageView = findViewById(R.id.profileImageView);
+
+        if (selectedGamesTextView == null) {
+            Log.e(TAG, "selectedGamesTextView is null after findViewById. Check activity_profile.xml for ID selectedGamesTextView");
+            Toast.makeText(this, "Error: selectedGamesTextView not found in layout", Toast.LENGTH_LONG).show();
+        }
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
@@ -65,16 +91,15 @@ public class ProfileActivity extends AppCompatActivity {
         // Set up BottomNavigationMenu
         Log.d(TAG, "onCreate: Setting up BottomNavigationMenu");
         BottomNavigationView bottomNavigationMenu = findViewById(R.id.bottom_navigation);
-        // Add debugging to confirm BottomNavigationMenu is found
         if (bottomNavigationMenu == null) {
             Log.e(TAG, "BottomNavigationMenu is null! Check activity_profile.xml for ID bottom_navigation");
             Toast.makeText(this, "BottomNavigationMenu not found in layout!", Toast.LENGTH_LONG).show();
-            return; // Exit onCreate to avoid crashes
+            return;
         } else {
             Log.d(TAG, "BottomNavigationMenu found successfully");
         }
 
-        bottomNavigationMenu.setSelectedItemId(R.id.navigation_profile); // Highlight "Profile" as selected
+        bottomNavigationMenu.setSelectedItemId(R.id.navigation_profile);
         bottomNavigationMenu.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
             String itemName;
@@ -90,12 +115,11 @@ public class ProfileActivity extends AppCompatActivity {
                 Log.d("BottomNav", "Navigation Main tab clicked, opening MainActivity");
                 try {
                     Intent intent = new Intent(ProfileActivity.this, MainActivity.class);
-                    // Pass the selected tab ID to MainActivity
                     intent.putExtra("selectedTabId", R.id.navigation_main);
                     intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                     startActivity(intent);
                     Log.d("BottomNav", "MainActivity started successfully");
-                    finish(); // Close ProfileActivity to avoid stacking
+                    finish();
                 } catch (Exception e) {
                     Log.e("BottomNav", "Failed to start MainActivity: " + e.getMessage(), e);
                     Toast.makeText(this, "Failed to open Main: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -108,12 +132,11 @@ public class ProfileActivity extends AppCompatActivity {
                 Log.d("BottomNav", "Opening ChatListActivity");
                 try {
                     Intent intent = new Intent(ProfileActivity.this, ChatListActivity.class);
-                    // Pass the selected tab ID to ChatListActivity
                     intent.putExtra("selectedTabId", R.id.navigation_chat);
                     intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                     startActivity(intent);
                     Log.d("BottomNav", "ChatListActivity started successfully");
-                    finish(); // Close ProfileActivity to avoid stacking
+                    finish();
                 } catch (Exception e) {
                     Log.e("BottomNav", "Failed to start ChatListActivity: " + e.getMessage(), e);
                     Toast.makeText(this, "Failed to open Chat: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -131,30 +154,50 @@ public class ProfileActivity extends AppCompatActivity {
         saveButton.setOnClickListener(v -> saveUserProfile());
 
         changeGamesButton.setOnClickListener(v -> {
+            Log.d(TAG, "Launching GameSelectingActivity with selectedGames: " + (selectedGames != null ? selectedGames.toString() : "null"));
             Intent intent = new Intent(ProfileActivity.this, GameSelectingActivity.class);
-            startActivity(intent);
+            intent.putStringArrayListExtra("selectedGames", new ArrayList<>(selectedGames));
+            intent.putExtra("fromProfile", true);
+            gameSelectionLauncher.launch(intent);
         });
     }
 
     private void loadUserProfile() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null) {
-            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
+            runOnUiThread(() -> Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show());
             return;
         }
 
-        DocumentReference userRef = db.collection("users").document(user.getUid());
-        userRef.get().addOnSuccessListener(documentSnapshot -> {
-            if (documentSnapshot.exists()) {
-                currentUsername = documentSnapshot.getString("username"); // Store the current username
-                String profileImageUrl = documentSnapshot.getString("profileImageUrl");
-                usernameEditText.setText(currentUsername);
+        executorService.execute(() -> {
+            DocumentReference userRef = db.collection("users").document(user.getUid());
+            userRef.get().addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    currentUsername = documentSnapshot.getString("username");
+                    String profileImageUrl = documentSnapshot.getString("profileImageUrl");
+                    selectedGames = parseGameList(documentSnapshot.get("selectedGames"));
+                    Log.d(TAG, "Loaded selectedGames from Firestore: " + (selectedGames != null ? selectedGames.toString() : "null"));
+                    if (selectedGames != null && selectedGames.contains("Warzone")) {
+                        Log.d(TAG, "Warzone is in selectedGames loaded from Firestore");
+                    } else {
+                        Log.d(TAG, "Warzone is NOT in selectedGames loaded from Firestore");
+                    }
 
-                if (profileImageUrl != null && !profileImageUrl.isEmpty()) {
-                    Glide.with(this).load(profileImageUrl).into(profileImageView);
+                    runOnUiThread(() -> {
+                        usernameEditText.setText(currentUsername);
+                        if (selectedGamesTextView != null) {
+                            selectedGamesTextView.setText("Selected Games: " + (selectedGames.isEmpty() ? "None" : String.join(", ", selectedGames)));
+                        } else {
+                            Log.e(TAG, "selectedGamesTextView is null in loadUserProfile");
+                        }
+
+                        if (profileImageUrl != null && !profileImageUrl.isEmpty()) {
+                            Glide.with(ProfileActivity.this).load(profileImageUrl).into(profileImageView);
+                        }
+                    });
                 }
-            }
-        }).addOnFailureListener(e -> Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            }).addOnFailureListener(e -> runOnUiThread(() -> Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_SHORT).show()));
+        });
     }
 
     private void saveUserProfile() {
@@ -175,19 +218,16 @@ public class ProfileActivity extends AppCompatActivity {
             return;
         }
 
-        // Check if the username has changed
         if (newUsername.equals(currentUsername)) {
             Toast.makeText(this, "No changes to username", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Check if the new username is already taken
         db.collection("usernames").document(newUsername).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         Toast.makeText(this, "Username already taken, please choose a different one", Toast.LENGTH_LONG).show();
                     } else {
-                        // Username is available, proceed with the update
                         updateUsername(user.getUid(), newUsername);
                     }
                 })
@@ -195,24 +235,20 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void updateUsername(String userId, String newUsername) {
-        // Use a batch write to update both the users and usernames collections atomically
         db.runBatch(batch -> {
-            // Update the users collection
             Map<String, Object> userData = new HashMap<>();
             userData.put("username", newUsername);
             batch.update(db.collection("users").document(userId), userData);
 
-            // Delete the old username entry from usernames collection
             if (currentUsername != null && !currentUsername.isEmpty()) {
                 batch.delete(db.collection("usernames").document(currentUsername));
             }
 
-            // Create a new username entry in usernames collection
             Map<String, Object> usernameData = new HashMap<>();
             usernameData.put("userId", userId);
             batch.set(db.collection("usernames").document(newUsername), usernameData);
         }).addOnSuccessListener(aVoid -> {
-            currentUsername = newUsername; // Update the current username
+            currentUsername = newUsername;
             Toast.makeText(this, "Profile updated!", Toast.LENGTH_SHORT).show();
         }).addOnFailureListener(e -> {
             String errorMessage = e.getMessage();
@@ -240,5 +276,23 @@ public class ProfileActivity extends AppCompatActivity {
             db.collection("users").document(userId).update("profileImageUrl", uri.toString());
             Toast.makeText(this, "Profile picture updated!", Toast.LENGTH_SHORT).show();
         }).addOnFailureListener(e -> Toast.makeText(this, "Image upload failed", Toast.LENGTH_SHORT).show());
+    }
+
+    private List<String> parseGameList(Object gamesObject) {
+        List<String> games = new ArrayList<>();
+        if (gamesObject instanceof List<?>) {
+            for (Object obj : (List<?>) gamesObject) {
+                if (obj instanceof String) {
+                    games.add((String) obj);
+                }
+            }
+        }
+        return games;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        executorService.shutdown();
     }
 }

@@ -81,12 +81,12 @@
             android:id="@+id/switchGame7"
             android:layout_width="300dp"
             android:layout_height="48dp"
-            android:text="@string/call_of_duty"
-            android:textColor="@android:color/white"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:layout_gravity="center_horizontal"
-            tools:ignore="UseSwitchCompatOrMaterialXml" />
+            android:text="@string/fortnite"
+        android:textColor="@android:color/white"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:layout_gravity="center_horizontal"
+        tools:ignore="UseSwitchCompatOrMaterialXml" />
 
         <Switch
             android:id="@+id/switchGame8"

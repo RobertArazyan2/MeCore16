@@ -3,14 +3,13 @@ package com.example.mecore;
 import com.google.firebase.Timestamp;
 
 public class Message {
-    private String id; // Added field for the message ID
-    private String text;
-    private Timestamp timestamp;
+    private String id;
+    private String text; // Renamed from messageText to text
     private String senderId;
+    private Timestamp timestamp;
+    private String senderUsername;
 
-    public Message() {
-        // Required for Firestore
-    }
+    public Message() {}
 
     public Message(String text, Timestamp timestamp) {
         this.text = text;
@@ -33,12 +32,15 @@ public class Message {
         this.text = text;
     }
 
-    public Timestamp getTimestamp() {
-        return timestamp;
+    // Deprecated: Remove if not needed elsewhere
+    @Deprecated
+    public String getMessageText() {
+        return text;
     }
 
-    public void setTimestamp(Timestamp timestamp) {
-        this.timestamp = timestamp;
+    @Deprecated
+    public void setMessageText(String messageText) {
+        this.text = messageText;
     }
 
     public String getSenderId() {
@@ -47,5 +49,21 @@ public class Message {
 
     public void setSenderId(String senderId) {
         this.senderId = senderId;
+    }
+
+    public Timestamp getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Timestamp timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public String getSenderUsername() {
+        return senderUsername;
+    }
+
+    public void setSenderUsername(String senderUsername) {
+        this.senderUsername = senderUsername;
     }
 }

@@ -139,7 +139,7 @@ public class SearchChatActivity extends AppCompatActivity {
         });
 
         messageList = new ArrayList<>();
-        adapter = new ChatAdapter(messageList);
+        adapter = new ChatAdapter(messageList, otherUsername);
         LinearLayoutManager manager = new LinearLayoutManager(this);
         manager.setReverseLayout(true);
         recyclerView.setLayoutManager(manager);

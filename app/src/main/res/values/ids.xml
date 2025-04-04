@@ -66,4 +66,10 @@
     <item name="bottomNavigationView" type="id" />
     <item name="nav_chat_list" type="id" />
     <item name="nav_main" type="id" />
+    <item name="friendRecyclerView" type="id" />
+    <item name="friendsRecyclerView" type="id" />
+    <item name="matchedUsernameTextView" type="id" />
+    <item name="deleteFriendButton" type="id" />
+    <item name="selectedGamesTextView" type="id" />
+    <item name="timestampTextView" type="id" />
 </resources>

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -54,6 +55,15 @@ public class ChatActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
+
+        // Initialize RecyclerView with an empty adapter to prevent layout warning
+        recyclerView = findViewById(R.id.chat_recycler_view);
+        messageList = new ArrayList<>();
+        adapter = new ChatAdapter(messageList, null);
+        LinearLayoutManager manager = new LinearLayoutManager(this);
+        manager.setReverseLayout(false);
+        recyclerView.setLayoutManager(manager);
+        recyclerView.setAdapter(adapter);
 
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
@@ -110,41 +120,62 @@ public class ChatActivity extends AppCompatActivity {
         chatId = createChatId(currentUserId, getIntent().getStringExtra("recipientId"));
 
         messageInput = findViewById(R.id.messageEditText);
-        ImageButton sendMessageBtn = findViewById(R.id.sendButton);
-        ImageButton backBtn = findViewById(R.id.back_btn);
+        Button sendMessageBtn = findViewById(R.id.sendButton);
+        ImageButton goBackButton = findViewById(R.id.goBackButton);
         TextView otherUsernameTextView = findViewById(R.id.chatTitle);
-        recyclerView = findViewById(R.id.chat_recycler_view);
 
         String otherUsername = getIntent().getStringExtra("otherUsername");
         String recipientId = getIntent().getStringExtra("recipientId");
+        String source = getIntent().getStringExtra("source");
 
-        if (otherUsername != null) {
-            otherUsernameTextView.setText("Chat with " + otherUsername);
-        }
-
-        backBtn.setOnClickListener(v -> {
-            Intent intent = new Intent(ChatActivity.this, SearchUserProfileActivity.class);
-            intent.putExtra("userId", recipientId);
-            intent.putExtra("username", otherUsername);
-            startActivity(intent);
-            finish();
-        });
-
-        messageList = new ArrayList<>();
-        adapter = new ChatAdapter(messageList);
-        LinearLayoutManager manager = new LinearLayoutManager(this);
-        manager.setReverseLayout(true);
-        recyclerView.setLayoutManager(manager);
+        // Update the adapter with the correct opponentUsername
+        adapter = new ChatAdapter(messageList, otherUsername);
         recyclerView.setAdapter(adapter);
 
-        sendMessageBtn.setOnClickListener(v -> {
-            String messageText = messageInput.getText().toString().trim();
-            if (!messageText.isEmpty()) {
-                sendMessageBtn.setEnabled(false);
-                sendMessage(messageText);
-                new android.os.Handler().postDelayed(() -> sendMessageBtn.setEnabled(true), 1000);
-            }
-        });
+        if (otherUsernameTextView == null) {
+            Log.e(TAG, "chatTitle TextView not found in layout. Check activity_chat.xml for ID 'chatTitle'.");
+        } else if (otherUsername != null) {
+            otherUsernameTextView.setText("Chat with " + otherUsername);
+        } else {
+            otherUsernameTextView.setText("Chat");
+        }
+
+        if (goBackButton == null) {
+            Log.e(TAG, "goBackButton ImageButton not found in layout. Check activity_chat.xml for ID 'goBackButton'.");
+        } else {
+            goBackButton.setOnClickListener(v -> {
+                Intent intent;
+                Log.d(TAG, "goBackButton clicked. Source: " + source);
+                if ("ChatListActivity".equals(source)) {
+                    Log.d(TAG, "Navigating to ChatListActivity");
+                    intent = new Intent(ChatActivity.this, ChatListActivity.class);
+                } else if ("SearchUserProfileActivity".equals(source) || "UserProfileActivity".equals(source)) {
+                    Log.d(TAG, "Navigating to SearchUserProfileActivity");
+                    intent = new Intent(ChatActivity.this, SearchUserProfileActivity.class);
+                    intent.putExtra("userId", recipientId);
+                    intent.putExtra("username", otherUsername);
+                } else {
+                    Log.w(TAG, "Unknown source: " + source + ". Defaulting to ChatListActivity.");
+                    intent = new Intent(ChatActivity.this, ChatListActivity.class);
+                }
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
+                finish();
+            });
+        }
+
+        if (sendMessageBtn == null) {
+            Log.e(TAG, "sendButton Button not found in layout. Check activity_chat.xml for ID 'sendButton'.");
+        } else {
+            sendMessageBtn.setOnClickListener(v -> {
+                String messageText = messageInput.getText().toString().trim();
+                if (!messageText.isEmpty()) {
+                    sendMessageBtn.setEnabled(false);
+                    sendMessage(messageText);
+                    new android.os.Handler().postDelayed(() -> sendMessageBtn.setEnabled(true), 1000);
+                }
+            });
+        }
 
         setupChatRecyclerView();
     }
@@ -157,7 +188,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private void setupChatRecyclerView() {
         Query query = db.collection("chats").document(chatId).collection("messages")
-                .orderBy("timestamp", Query.Direction.DESCENDING);
+                .orderBy("timestamp", Query.Direction.ASCENDING);
 
         messageListener = query.addSnapshotListener((querySnapshot, e) -> {
             if (e != null) {
@@ -168,6 +199,11 @@ public class ChatActivity extends AppCompatActivity {
                 for (DocumentChange dc : querySnapshot.getDocumentChanges()) {
                     Message message = dc.getDocument().toObject(Message.class);
                     message.setId(dc.getDocument().getId());
+                    if (message.getSenderId().equals(Objects.requireNonNull(auth.getCurrentUser()).getUid())) {
+                        message.setSenderUsername("Me");
+                    } else {
+                        message.setSenderUsername(getIntent().getStringExtra("otherUsername"));
+                    }
                     switch (dc.getType()) {
                         case ADDED:
                             boolean exists = false;
@@ -178,9 +214,9 @@ public class ChatActivity extends AppCompatActivity {
                                 }
                             }
                             if (!exists) {
-                                messageList.add(0, message);
-                                adapter.notifyItemInserted(0);
-                                recyclerView.smoothScrollToPosition(0);
+                                messageList.add(message);
+                                adapter.notifyItemInserted(messageList.size() - 1);
+                                recyclerView.smoothScrollToPosition(messageList.size() - 1);
                             }
                             break;
                         case MODIFIED:

@@ -6,16 +6,6 @@
     android:padding="16dp"
     android:background="@color/darkgrey">
 
-    <!-- Username EditText -->
-
-    <!-- Profile Image -->
-
-    <!-- Save Button -->
-
-    <!-- Change Games Button -->
-
-    <!-- Bottom Navigation Menu -->
-
     <EditText
         android:id="@+id/editTextUsername"
         android:layout_width="0dp"
@@ -44,18 +34,30 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <TextView
+        android:id="@+id/selectedGamesTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Selected Games: None"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/editTextUsername" />
+
     <Button
         android:id="@+id/buttonSave"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="88dp"
+        android:layout_marginTop="8dp"
         android:backgroundTint="#2196F3"
         android:text="Save Profile"
         android:textColor="#FFFFFF"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/profileImageView" />
+        app:layout_constraintTop_toBottomOf="@id/selectedGamesTextView" />
 
     <Button
         android:id="@+id/buttonChangeGames"
