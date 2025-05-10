@@ -3,6 +3,11 @@
     package="com.example.mecore">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -48,20 +53,32 @@
             android:name=".UserProfileActivity"
             android:exported="true">
         </activity>
+
         <activity
             android:name=".ProfileActivity"
             android:exported="true">
         </activity>
+
         <activity
             android:name=".ChatListActivity"
             android:exported="true">
         </activity>
+
         <activity
             android:name=".ChatActivity"
             android:exported="true">
         </activity>
-        <activity android:name=".SearchUserProfileActivity" />
-        <activity android:name=".SearchChatActivity" />
 
+        <activity
+            android:name=".SearchUserProfileActivity"
+            android:exported="true" />
+
+        <activity
+            android:name=".SearchChatActivity"
+            android:exported="true" />
+        <activity android:name=".FriendRequestsActivity" />
+        <activity
+            android:name=".CallActivity"
+            android:exported="true" />
     </application>
 </manifest>

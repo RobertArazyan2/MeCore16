@@ -26,10 +26,10 @@ public class LoginActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
 
-        // Redirect verified users to the main app
         if (mAuth.getCurrentUser() != null && mAuth.getCurrentUser().isEmailVerified()) {
-            startActivity(new Intent(LoginActivity.this, GameSelectingActivity.class));
+            startActivity(new Intent(this, GameSelectingActivity.class));
             finish();
+            return;
         }
 
         emailEditText = findViewById(R.id.editTextEmail);
@@ -39,18 +39,20 @@ public class LoginActivity extends AppCompatActivity {
         TextView forgotPasswordTextView = findViewById(R.id.textResetPassword);
 
         registerTextView.setOnClickListener(v -> {
-            startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
+            startActivity(new Intent(this, RegisterActivity.class));
             finish();
         });
 
-        forgotPasswordTextView.setOnClickListener(v -> startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class)));
+        forgotPasswordTextView.setOnClickListener(v ->
+                startActivity(new Intent(this, ForgotPasswordActivity.class))
+        );
 
         loginButton.setOnClickListener(v -> {
             String email = emailEditText.getText().toString().trim();
             String password = passwordEditText.getText().toString().trim();
 
             if (email.isEmpty() || password.isEmpty()) {
-                Toast.makeText(LoginActivity.this, "Enter email and password", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Enter email and password", Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -59,14 +61,14 @@ public class LoginActivity extends AppCompatActivity {
                         if (task.isSuccessful()) {
                             FirebaseUser user = mAuth.getCurrentUser();
                             if (user != null && user.isEmailVerified()) {
-                                startActivity(new Intent(LoginActivity.this, GameSelectingActivity.class));
+                                startActivity(new Intent(this, GameSelectingActivity.class));
                                 finish();
                             } else {
-                                Toast.makeText(LoginActivity.this, "Please verify your email before logging in.", Toast.LENGTH_LONG).show();
-                                FirebaseAuth.getInstance().signOut(); // Sign out unverified users
+                                Toast.makeText(this, "Please verify your email before logging in.", Toast.LENGTH_LONG).show();
+                                mAuth.signOut();
                             }
                         } else {
-                            Toast.makeText(LoginActivity.this, "Login failed: " + Objects.requireNonNull(task.getException()).getMessage(), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Login failed: " + Objects.requireNonNull(task.getException()).getMessage(), Toast.LENGTH_SHORT).show();
                         }
                     });
         });

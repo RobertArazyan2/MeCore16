@@ -4,12 +4,15 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -49,6 +52,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private EditText messageInput;
     private RecyclerView recyclerView;
+    private ImageButton callButton; // Changed from Button to ImageButton
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -59,7 +63,7 @@ public class ChatActivity extends AppCompatActivity {
         // Initialize RecyclerView with an empty adapter to prevent layout warning
         recyclerView = findViewById(R.id.chat_recycler_view);
         messageList = new ArrayList<>();
-        adapter = new ChatAdapter(messageList, null);
+        adapter = new ChatAdapter(messageList, getIntent().getStringExtra("otherUsername"), this::showMessageOptions);
         LinearLayoutManager manager = new LinearLayoutManager(this);
         manager.setReverseLayout(false);
         recyclerView.setLayoutManager(manager);
@@ -74,6 +78,7 @@ public class ChatActivity extends AppCompatActivity {
                         if (task.isSuccessful()) {
                             initializeChat();
                         } else {
+                            Toast.makeText(this, "Failed to sign in anonymously", Toast.LENGTH_LONG).show();
                             finish();
                         }
                     });
@@ -123,13 +128,14 @@ public class ChatActivity extends AppCompatActivity {
         Button sendMessageBtn = findViewById(R.id.sendButton);
         ImageButton goBackButton = findViewById(R.id.goBackButton);
         TextView otherUsernameTextView = findViewById(R.id.chatTitle);
+        callButton = findViewById(R.id.callButton); // Correct type: ImageButton
 
         String otherUsername = getIntent().getStringExtra("otherUsername");
         String recipientId = getIntent().getStringExtra("recipientId");
         String source = getIntent().getStringExtra("source");
 
         // Update the adapter with the correct opponentUsername
-        adapter = new ChatAdapter(messageList, otherUsername);
+        adapter = new ChatAdapter(messageList, otherUsername, this::showMessageOptions);
         recyclerView.setAdapter(adapter);
 
         if (otherUsernameTextView == null) {
@@ -175,6 +181,17 @@ public class ChatActivity extends AppCompatActivity {
                     new android.os.Handler().postDelayed(() -> sendMessageBtn.setEnabled(true), 1000);
                 }
             });
+        }
+
+        if (callButton != null) {
+            callButton.setOnClickListener(v -> {
+                Intent intent = new Intent(ChatActivity.this, CallActivity.class);
+                intent.putExtra("channelName", chatId);
+                intent.putExtra("recipientName", otherUsername);
+                startActivity(intent);
+            });
+        } else {
+            Log.e(TAG, "callButton ImageButton not found in layout. Check activity_chat.xml for ID 'callButton'.");
         }
 
         setupChatRecyclerView();
@@ -311,6 +328,72 @@ public class ChatActivity extends AppCompatActivity {
                 Log.d(TAG, "FCM Response: " + response.code() + " - " + responseMessage + " - " + responseBody);
             }
         });
+    }
+
+    private void showMessageOptions(int position) {
+        if (position < 0 || position >= messageList.size()) return;
+
+        Message message = messageList.get(position);
+        String currentUserId = Objects.requireNonNull(auth.getCurrentUser()).getUid();
+
+        if (!message.getSenderId().equals(currentUserId)) {
+            Toast.makeText(this, "You can only edit or delete your own messages", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Message Options")
+                .setItems(new CharSequence[]{"Edit", "Delete"}, (dialog, which) -> {
+                    switch (which) {
+                        case 0: // Edit
+                            editMessage(position);
+                            break;
+                        case 1: // Delete
+                            deleteMessage(position);
+                            break;
+                    }
+                });
+        builder.show();
+    }
+
+    private void editMessage(int position) {
+        Message message = messageList.get(position);
+        EditText editText = new EditText(this);
+        editText.setText(message.getText());
+
+        new AlertDialog.Builder(this)
+                .setTitle("Edit Message")
+                .setView(editText)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String newText = editText.getText().toString().trim();
+                    if (!newText.isEmpty()) {
+                        message.setText(newText);
+                        message.setTimestamp(Timestamp.now()); // Update timestamp
+                        db.collection("chats").document(chatId).collection("messages")
+                                .document(message.getId())
+                                .set(message)
+                                .addOnSuccessListener(aVoid -> {
+                                    adapter.notifyItemChanged(position);
+                                    Toast.makeText(this, "Message edited", Toast.LENGTH_SHORT).show();
+                                })
+                                .addOnFailureListener(e -> Log.e(TAG, "Failed to edit message: " + e.getMessage()));
+                    }
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                .show();
+    }
+
+    private void deleteMessage(int position) {
+        Message message = messageList.get(position);
+        db.collection("chats").document(chatId).collection("messages")
+                .document(message.getId())
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    messageList.remove(position);
+                    adapter.notifyItemRemoved(position);
+                    Toast.makeText(this, "Message deleted", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Failed to delete message: " + e.getMessage()));
     }
 
     @Override

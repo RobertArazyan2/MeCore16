@@ -29,33 +29,34 @@ public class SplashActivity extends AppCompatActivity {
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        new Handler().postDelayed(() -> {
-            if (auth.getCurrentUser() != null) {
-                // User is logged in, check if games are selected
-                String userId = auth.getCurrentUser().getUid();
-                DocumentReference userDocRef = db.collection("users").document(userId);
-                userDocRef.get().addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        if (task.getResult().contains("selectedGames")) {
-                            // User has selected games, go to MainActivity
-                            Log.d("SplashActivity", "User has selected games");
-                            startActivity(new Intent(SplashActivity.this, MainActivity.class));
-                        } else {
-                            // User hasn't selected games, go to GameSelectingActivity
-                            Log.d("SplashActivity", "User has not selected games");
-                            startActivity(new Intent(SplashActivity.this, GameSelectingActivity.class));
-                        }
+        new Handler().postDelayed(this::checkUserState, 2000); // 2-second delay
+    }
+
+    private void checkUserState() {
+        if (auth.getCurrentUser() != null) {
+            String userId = auth.getCurrentUser().getUid();
+            DocumentReference userDocRef = db.collection("users").document(userId);
+
+            userDocRef.get().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    if (task.getResult().contains("selectedGames")) {
+                        Log.d("SplashActivity", "User has selected games");
+                        startActivity(new Intent(this, MainActivity.class));
                     } else {
-                        // Error fetching data
-                        Log.e("SplashActivity", "Error fetching user data: " + Objects.requireNonNull(task.getException()).getMessage());
-                        Toast.makeText(SplashActivity.this, "Error fetching data", Toast.LENGTH_SHORT).show();
+                        Log.d("SplashActivity", "User has not selected games");
+                        startActivity(new Intent(this, GameSelectingActivity.class));
                     }
-                });
-            } else {
-                // User not logged in, go to LoginActivity
-                startActivity(new Intent(SplashActivity.this, LoginActivity.class));
-            }
-            finish(); // Finish the splash activity
-        }, 2000); // Wait for 2 seconds before navigating
+                } else {
+                    Log.e("SplashActivity", "Error fetching user data: " +
+                            Objects.requireNonNull(task.getException()).getMessage());
+                    Toast.makeText(this, "Error fetching user data", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(this, LoginActivity.class));
+                }
+                finish();
+            });
+        } else {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+        }
     }
 }

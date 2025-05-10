@@ -1,5 +1,6 @@
 package com.example.mecore;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
@@ -20,12 +21,14 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -42,7 +45,8 @@ public class ProfileActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private FirebaseStorage storage;
     private String currentUsername;
-    private List<String> selectedGames;
+    private List<String> currentSelectedGames;
+    private List<String> selectedGames = new ArrayList<>();
     private final ExecutorService executorService = Executors.newFixedThreadPool(2);
     private final ActivityResultLauncher<Intent> imagePickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -55,11 +59,16 @@ public class ProfileActivity extends AppCompatActivity {
                     }
                 }
             });
+
+    @SuppressLint("SetTextI18n")
     private final ActivityResultLauncher<Intent> gameSelectionLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     selectedGames = result.getData().getStringArrayListExtra("updatedGames");
+                    if (selectedGames == null) {
+                        selectedGames = new ArrayList<>();
+                    }
                     if (selectedGamesTextView != null) {
                         selectedGamesTextView.setText("Selected Games: " + (selectedGames.isEmpty() ? "None" : String.join(", ", selectedGames)));
                     } else {
@@ -77,6 +86,7 @@ public class ProfileActivity extends AppCompatActivity {
         selectedGamesTextView = findViewById(R.id.selectedGamesTextView);
         Button saveButton = findViewById(R.id.buttonSave);
         Button changeGamesButton = findViewById(R.id.buttonChangeGames);
+        Button logoutButton = findViewById(R.id.buttonLogout); // New logout button
         profileImageView = findViewById(R.id.profileImageView);
 
         if (selectedGamesTextView == null) {
@@ -160,8 +170,27 @@ public class ProfileActivity extends AppCompatActivity {
             intent.putExtra("fromProfile", true);
             gameSelectionLauncher.launch(intent);
         });
+
+        // Set up logout button
+        if (logoutButton == null) {
+            Log.e(TAG, "logoutButton is null! Check activity_profile.xml for ID buttonLogout");
+            Toast.makeText(this, "Error: Logout button not found in layout", Toast.LENGTH_LONG).show();
+        } else {
+            logoutButton.setOnClickListener(v -> logout());
+        }
     }
 
+    private void logout() {
+        Log.d(TAG, "Logging out user");
+        mAuth.signOut();
+        Intent intent = new Intent(ProfileActivity.this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show();
+        finish();
+    }
+
+    @SuppressLint("SetTextI18n")
     private void loadUserProfile() {
         FirebaseUser user = mAuth.getCurrentUser();
         if (user == null) {
@@ -173,10 +202,15 @@ public class ProfileActivity extends AppCompatActivity {
             DocumentReference userRef = db.collection("users").document(user.getUid());
             userRef.get().addOnSuccessListener(documentSnapshot -> {
                 if (documentSnapshot.exists()) {
-                    currentUsername = documentSnapshot.getString("username");
+                    String loadedUsername = documentSnapshot.getString("username");
                     String profileImageUrl = documentSnapshot.getString("profileImageUrl");
-                    selectedGames = parseGameList(documentSnapshot.get("selectedGames"));
-                    Log.d(TAG, "Loaded selectedGames from Firestore: " + (selectedGames != null ? selectedGames.toString() : "null"));
+                    currentSelectedGames = parseGameList(documentSnapshot.get("selectedGames"));
+                    selectedGames = new ArrayList<>(currentSelectedGames != null ? currentSelectedGames : new ArrayList<>());
+                    Log.d(TAG, "Loaded user profile from Firestore: username=" + loadedUsername + ", selectedGames=" + selectedGames.toString());
+                    if (loadedUsername != null && !loadedUsername.equals(currentUsername)) {
+                        Log.w(TAG, "Username mismatch! Firestore username=" + loadedUsername + ", currentUsername=" + currentUsername);
+                    }
+                    currentUsername = loadedUsername;
                     if (selectedGames != null && selectedGames.contains("Warzone")) {
                         Log.d(TAG, "Warzone is in selectedGames loaded from Firestore");
                     } else {
@@ -195,8 +229,13 @@ public class ProfileActivity extends AppCompatActivity {
                             Glide.with(ProfileActivity.this).load(profileImageUrl).into(profileImageView);
                         }
                     });
+                } else {
+                    runOnUiThread(() -> Toast.makeText(this, "User profile not found", Toast.LENGTH_SHORT).show());
                 }
-            }).addOnFailureListener(e -> runOnUiThread(() -> Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_SHORT).show()));
+            }).addOnFailureListener(e -> runOnUiThread(() -> {
+                Log.e(TAG, "Failed to load profile: " + e.getMessage(), e);
+                Toast.makeText(this, "Failed to load profile: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }));
         });
     }
 
@@ -218,46 +257,142 @@ public class ProfileActivity extends AppCompatActivity {
             return;
         }
 
-        if (newUsername.equals(currentUsername)) {
-            Toast.makeText(this, "No changes to username", Toast.LENGTH_SHORT).show();
+        boolean usernameChanged = !newUsername.equals(currentUsername);
+        boolean gamesChanged = !areGamesEqual(selectedGames, currentSelectedGames);
+
+        if (!usernameChanged && !gamesChanged) {
+            Toast.makeText(this, "No changes to save", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        db.collection("usernames").document(newUsername).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        Toast.makeText(this, "Username already taken, please choose a different one", Toast.LENGTH_LONG).show();
-                    } else {
-                        updateUsername(user.getUid(), newUsername);
-                    }
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "Failed to check username availability: " + e.getMessage(), Toast.LENGTH_LONG).show());
+        if (usernameChanged) {
+            // Check if the new username is available
+            db.collection("usernames").document(newUsername).get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (documentSnapshot.exists()) {
+                            Toast.makeText(this, "Username already taken, please choose a different one", Toast.LENGTH_LONG).show();
+                        } else {
+                            // Verify ownership of the old username
+                            if (currentUsername != null && !currentUsername.isEmpty()) {
+                                db.collection("-non-null").document(currentUsername).get()
+                                        .addOnSuccessListener(oldUsernameSnapshot -> {
+                                            if (oldUsernameSnapshot.exists() && oldUsernameSnapshot.getString("userId").equals(user.getUid())) {
+                                                updateUserProfile(user.getUid(), newUsername);
+                                            } else {
+                                                Log.w(TAG, "Old username " + currentUsername + " does not belong to user " + user.getUid());
+                                                Toast.makeText(this, "Profile Updated!", Toast.LENGTH_LONG).show();
+                                                // Update the user document without touching usernames
+                                                updateUserProfileWithoutUsernames(user.getUid(), newUsername);
+                                            }
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            Log.e(TAG, "Failed to verify old username: " + e.getMessage(), e);
+                                            Toast.makeText(this, "Failed to verify old username: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                            // Proceed with update without touching usernames as a fallback
+                                            updateUserProfileWithoutUsernames(user.getUid(), newUsername);
+                                        });
+                            } else {
+                                updateUserProfile(user.getUid(), newUsername);
+                            }
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Failed to check username availability: " + e.getMessage(), e);
+                        Toast.makeText(this, "Failed to check username availability: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    });
+        } else {
+            // No username change, just update games
+            updateUserProfileWithoutUsernames(user.getUid(), newUsername);
+        }
     }
 
-    private void updateUsername(String userId, String newUsername) {
+    private void updateUserProfile(String userId, String newUsername) {
         db.runBatch(batch -> {
             Map<String, Object> userData = new HashMap<>();
             userData.put("username", newUsername);
+            userData.put("selectedGames", selectedGames);
+            Log.d(TAG, "Updating user document with data: " + userData.toString());
             batch.update(db.collection("users").document(userId), userData);
 
             if (currentUsername != null && !currentUsername.isEmpty()) {
+                Log.d(TAG, "Deleting old username: " + currentUsername);
                 batch.delete(db.collection("usernames").document(currentUsername));
+                Map<String, Object> usernameData = new HashMap<>();
+                usernameData.put("userId", userId);
+                Log.d(TAG, "Creating new username entry: " + newUsername + " with data: " + usernameData.toString());
+                batch.set(db.collection("usernames").document(newUsername), usernameData);
             }
-
-            Map<String, Object> usernameData = new HashMap<>();
-            usernameData.put("userId", userId);
-            batch.set(db.collection("usernames").document(newUsername), usernameData);
         }).addOnSuccessListener(aVoid -> {
+            Log.d(TAG, "Batch write succeeded");
+            db.collection("users").document(userId).get().addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    List<String> savedGames = parseGameList(documentSnapshot.get("selectedGames"));
+                    Log.d(TAG, "Games in Firestore after save: " + savedGames.toString());
+                    if (!areGamesEqual(savedGames, selectedGames)) {
+                        Log.e(TAG, "Games not saved correctly! Expected: " + selectedGames + ", Got: " + savedGames);
+                        Toast.makeText(this, "Error: Games not saved correctly", Toast.LENGTH_LONG).show();
+                    }
+                }
+            });
             currentUsername = newUsername;
+            currentSelectedGames = new ArrayList<>(selectedGames);
             Toast.makeText(this, "Profile updated!", Toast.LENGTH_SHORT).show();
         }).addOnFailureListener(e -> {
             String errorMessage = e.getMessage();
+            Log.e(TAG, "Failed to update profile: " + errorMessage, e);
             if (errorMessage != null && errorMessage.contains("PERMISSION_DENIED")) {
                 Toast.makeText(this, "Failed to update profile: Permission denied", Toast.LENGTH_LONG).show();
             } else {
                 Toast.makeText(this, "Failed to update profile: " + errorMessage, Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    private void updateUserProfileWithoutUsernames(String userId, String newUsername) {
+        Map<String, Object> userData = new HashMap<>();
+        boolean usernameChanged = !newUsername.equals(currentUsername);
+        boolean gamesChanged = !areGamesEqual(selectedGames, currentSelectedGames);
+
+        if (usernameChanged) {
+            userData.put("username", newUsername);
+        }
+        if (gamesChanged) {
+            userData.put("selectedGames", selectedGames);
+        }
+
+        if (userData.isEmpty()) {
+            Log.d(TAG, "No fields to update in user document");
+            Toast.makeText(this, "No changes to save", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Log.d(TAG, "Updating user document without usernames collection changes: " + userData.toString());
+        db.collection("users").document(userId).update(userData)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "User document updated successfully");
+                    if (usernameChanged) {
+                        currentUsername = newUsername;
+                    }
+                    if (gamesChanged) {
+                        currentSelectedGames = new ArrayList<>(selectedGames);
+                    }
+                    Toast.makeText(this, "Profile updated!", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    String errorMessage = e.getMessage();
+                    Log.e(TAG, "Failed to update profile without usernames: " + errorMessage, e);
+                    if (errorMessage != null && errorMessage.contains("PERMISSION_DENIED")) {
+                        Toast.makeText(this, "Failed to update profile: Permission denied", Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(this, "Failed to update profile: " + errorMessage, Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+
+    private boolean areGamesEqual(List<String> games1, List<String> games2) {
+        if (games1 == null && games2 == null) return true;
+        if (games1 == null || games2 == null) return false;
+        return games1.size() == games2.size() && new HashSet<>(games1).containsAll(games2) && new HashSet<>(games2).containsAll(games1);
     }
 
     private void openFileChooser() {
@@ -272,10 +407,15 @@ public class ProfileActivity extends AppCompatActivity {
         fileRef.putFile(imageUri).continueWithTask(task -> {
             if (!task.isSuccessful()) throw Objects.requireNonNull(task.getException());
             return fileRef.getDownloadUrl();
-        }).addOnSuccessListener(uri -> {
-            db.collection("users").document(userId).update("profileImageUrl", uri.toString());
-            Toast.makeText(this, "Profile picture updated!", Toast.LENGTH_SHORT).show();
-        }).addOnFailureListener(e -> Toast.makeText(this, "Image upload failed", Toast.LENGTH_SHORT).show());
+        }).addOnSuccessListener(uri -> db.collection("users").document(userId).update("profileImageUrl", uri.toString())
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Profile picture updated!", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to update profileImageUrl in Firestore: " + e.getMessage(), e);
+                    Toast.makeText(this, "Failed to update profile picture in database: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                })).addOnFailureListener(e -> {
+            Log.e(TAG, "Image upload failed: " + e.getMessage(), e);
+            Toast.makeText(this, "Image upload failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        });
     }
 
     private List<String> parseGameList(Object gamesObject) {

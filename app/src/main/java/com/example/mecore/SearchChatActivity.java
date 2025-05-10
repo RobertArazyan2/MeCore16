@@ -37,6 +37,11 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
+// Define the OnMessageLongClickListener interface (if not already defined elsewhere)
+interface OnMessageLongClickListener {
+    void onMessageLongClick(int position);
+}
+
 public class SearchChatActivity extends AppCompatActivity {
     private static final String TAG = "SearchChatActivity";
     private String chatId;
@@ -139,7 +144,11 @@ public class SearchChatActivity extends AppCompatActivity {
         });
 
         messageList = new ArrayList<>();
-        adapter = new ChatAdapter(messageList, otherUsername);
+        // Add a no-op OnMessageLongClickListener since it's required by ChatAdapter
+        adapter = new ChatAdapter(messageList, otherUsername, position -> {
+            // No action needed if long-click is not implemented
+            Log.d(TAG, "Long click on message at position: " + position);
+        });
         LinearLayoutManager manager = new LinearLayoutManager(this);
         manager.setReverseLayout(true);
         recyclerView.setLayoutManager(manager);

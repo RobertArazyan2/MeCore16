@@ -50,37 +50,24 @@ public class GameSelectingActivity extends AppCompatActivity {
 
         Button submitButton = findViewById(R.id.submitGamesSelection);
 
-        // Get the previously selected games from the Intent (if coming from ProfileActivity)
         List<String> selectedGames = getIntent().getStringArrayListExtra("selectedGames");
         boolean fromProfile = getIntent().getBooleanExtra("fromProfile", false);
 
-        // Log the selectedGames list to debug
         if (selectedGames != null) {
             Log.d(TAG, "Received selectedGames: " + selectedGames.toString());
-            if (selectedGames.contains("Warzone")) {
-                Log.d(TAG, "Warzone is in selectedGames, setting switchGame5 to true");
-                switchGame5.setChecked(true);
-            } else {
-                Log.d(TAG, "Warzone is NOT in selectedGames, switchGame5 remains unchecked");
-            }
-            if (selectedGames.contains("Fortnite")) {
-                Log.d(TAG, "Fortnite is in selectedGames, setting switchGame7 to true");
-                switchGame7.setChecked(true);
-            } else {
-                Log.d(TAG, "Fortnite is NOT in selectedGames, switchGame7 remains unchecked");
-            }
 
-            // Pre-set the switches based on selected games
-            if (selectedGames.contains("Minecraft")) switchGame2.setChecked(true);
-            if (selectedGames.contains("League of Legends")) switchGame3.setChecked(true);
-            if (selectedGames.contains("PUBG")) switchGame4.setChecked(true);
-            if (selectedGames.contains("Apex Legends")) switchGame6.setChecked(true);
-            if (selectedGames.contains("Counter-Strike: Global Offensive")) switchGame8.setChecked(true);
-            if (selectedGames.contains("Overwatch")) switchGame9.setChecked(true);
-            if (selectedGames.contains("Rocket League")) switchGame10.setChecked(true);
-            if (selectedGames.contains("Roblox")) switchGame11.setChecked(true);
-            if (selectedGames.contains("Among Us")) switchGame12.setChecked(true);
-            if (selectedGames.contains("Hearthstone")) switchGame13.setChecked(true);
+            if (switchGame2 != null && selectedGames.contains("Minecraft")) switchGame2.setChecked(true);
+            if (switchGame3 != null && selectedGames.contains("League of Legends")) switchGame3.setChecked(true);
+            if (switchGame4 != null && selectedGames.contains("PUBG")) switchGame4.setChecked(true);
+            if (switchGame5 != null && selectedGames.contains("Warzone")) switchGame5.setChecked(true);
+            if (switchGame6 != null && selectedGames.contains("Apex Legends")) switchGame6.setChecked(true);
+            if (switchGame7 != null && selectedGames.contains("Fortnite")) switchGame7.setChecked(true);
+            if (switchGame8 != null && selectedGames.contains("Counter-Strike: Global Offensive")) switchGame8.setChecked(true);
+            if (switchGame9 != null && selectedGames.contains("Overwatch")) switchGame9.setChecked(true);
+            if (switchGame10 != null && selectedGames.contains("Rocket League")) switchGame10.setChecked(true);
+            if (switchGame11 != null && selectedGames.contains("Roblox")) switchGame11.setChecked(true);
+            if (switchGame12 != null && selectedGames.contains("Among Us")) switchGame12.setChecked(true);
+            if (switchGame13 != null && selectedGames.contains("Hearthstone")) switchGame13.setChecked(true);
         } else {
             Log.d(TAG, "selectedGames is null");
         }
@@ -88,40 +75,34 @@ public class GameSelectingActivity extends AppCompatActivity {
         submitButton.setOnClickListener(v -> {
             List<String> updatedGames = new ArrayList<>();
 
-            // Add selected games to the list
-            if (switchGame2.isChecked()) updatedGames.add("Minecraft");
-            if (switchGame3.isChecked()) updatedGames.add("League of Legends");
-            if (switchGame4.isChecked()) updatedGames.add("PUBG");
-            if (switchGame5.isChecked()) updatedGames.add("Warzone");
-            if (switchGame6.isChecked()) updatedGames.add("Apex Legends");
-            if (switchGame7.isChecked()) updatedGames.add("Fortnite");
-            if (switchGame8.isChecked()) updatedGames.add("Counter-Strike: Global Offensive");
-            if (switchGame9.isChecked()) updatedGames.add("Overwatch");
-            if (switchGame10.isChecked()) updatedGames.add("Rocket League");
-            if (switchGame11.isChecked()) updatedGames.add("Roblox");
-            if (switchGame12.isChecked()) updatedGames.add("Among Us");
-            if (switchGame13.isChecked()) updatedGames.add("Hearthstone");
+            if (switchGame2 != null && switchGame2.isChecked()) updatedGames.add("Minecraft");
+            if (switchGame3 != null && switchGame3.isChecked()) updatedGames.add("League of Legends");
+            if (switchGame4 != null && switchGame4.isChecked()) updatedGames.add("PUBG");
+            if (switchGame5 != null && switchGame5.isChecked()) updatedGames.add("Warzone");
+            if (switchGame6 != null && switchGame6.isChecked()) updatedGames.add("Apex Legends");
+            if (switchGame7 != null && switchGame7.isChecked()) updatedGames.add("Fortnite");
+            if (switchGame8 != null && switchGame8.isChecked()) updatedGames.add("Counter-Strike: Global Offensive");
+            if (switchGame9 != null && switchGame9.isChecked()) updatedGames.add("Overwatch");
+            if (switchGame10 != null && switchGame10.isChecked()) updatedGames.add("Rocket League");
+            if (switchGame11 != null && switchGame11.isChecked()) updatedGames.add("Roblox");
+            if (switchGame12 != null && switchGame12.isChecked()) updatedGames.add("Among Us");
+            if (switchGame13 != null && switchGame13.isChecked()) updatedGames.add("Hearthstone");
 
-            // Log the updated games
             Log.d(TAG, "Submitting updatedGames: " + updatedGames.toString());
 
-            // Check if no games are selected
             if (updatedGames.isEmpty()) {
                 Toast.makeText(this, "No games selected!", Toast.LENGTH_SHORT).show();
             } else {
-                // Check if user is logged in
                 if (auth.getCurrentUser() != null) {
                     String userId = Objects.requireNonNull(auth.getCurrentUser()).getUid();
                     saveGamesToFirestore(userId, updatedGames);
 
                     if (fromProfile) {
-                        // Return the updated games list to ProfileActivity
                         Intent resultIntent = new Intent();
                         resultIntent.putStringArrayListExtra("updatedGames", new ArrayList<>(updatedGames));
                         setResult(RESULT_OK, resultIntent);
                         finish();
                     } else {
-                        // Navigate to MainActivity (initial game selection flow)
                         Intent intent = new Intent(GameSelectingActivity.this, MainActivity.class);
                         startActivity(intent);
                         finish();
@@ -133,11 +114,12 @@ public class GameSelectingActivity extends AppCompatActivity {
         });
     }
 
-    // Save selected games to Firestore
     private void saveGamesToFirestore(String userId, List<String> selectedGames) {
         DocumentReference userDocRef = db.collection("users").document(userId);
         userDocRef.update("selectedGames", selectedGames)
-                .addOnSuccessListener(aVoid -> Toast.makeText(GameSelectingActivity.this, "Games saved!", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(GameSelectingActivity.this, "Error saving games: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                .addOnSuccessListener(aVoid ->
+                        Toast.makeText(GameSelectingActivity.this, "Games saved!", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e ->
+                        Toast.makeText(GameSelectingActivity.this, "Error saving games: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 }

@@ -72,4 +72,14 @@
     <item name="deleteFriendButton" type="id" />
     <item name="selectedGamesTextView" type="id" />
     <item name="timestampTextView" type="id" />
+    <item name="callButton" type="id" />
+    <item name="hangUpButton" type="id" />
+    <item name="buttonLogout" type="id" />
+    <item name="sendFriendRequestButton" type="id" />
+    <item name="mutualGamesTextView" type="id" />
+    <item name="senderUsernameTextView" type="id" />
+    <item name="viewFriendRequestsButton" type="id" />
+    <item name="chatListTitle" type="id" />
+    <item name="message_text" type="id" />
+    <item name="sender_text" type="id" />
 </resources>

@@ -37,7 +37,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
-    implementation (libs.material.v190)
+    implementation(libs.material.v190)
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
@@ -47,9 +47,29 @@ dependencies {
     implementation(libs.firebase.storage)
 
     implementation(libs.glide)
-    implementation (libs.squareup.okhttp)
+    implementation(libs.squareup.okhttp)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+
+    // Kept your nested dependencies block since you want to keep everything
+    dependencies {
+        // Agora Voice SDK
+        implementation(libs.voice.sdk.v432)
+
+        // Firebase dependencies (already in your project)
+        implementation(libs.firebase.auth.v2300)
+        implementation(libs.google.firebase.firestore)
+        implementation(libs.firebase.messaging.v2400)
+
+        // OkHttp for FCM notifications (already in your project)
+        implementation(libs.squareup.okhttp)
+
+            implementation(libs.voice.sdk.v440)
+
+    }
+
+    // Added androidx.core:core for ContextCompat in ChatActivity
+    implementation(libs.core)
 }

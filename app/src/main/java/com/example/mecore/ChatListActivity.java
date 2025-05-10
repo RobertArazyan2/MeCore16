@@ -1,8 +1,10 @@
 package com.example.mecore;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -24,6 +26,7 @@ public class ChatListActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
     private String currentUserId;
+    private String currentUsername; // Added to pass to FriendRequestsActivity
     private List<Friend> friendList;
     private FriendAdapter friendAdapter;
     private RecyclerView recyclerView;
@@ -43,6 +46,25 @@ public class ChatListActivity extends AppCompatActivity {
             return;
         }
         currentUserId = mAuth.getCurrentUser().getUid();
+
+        // Fetch current username from Firestore
+        db.collection("users").document(currentUserId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        currentUsername = documentSnapshot.getString("username");
+                        if (currentUsername == null) {
+                            Log.e(TAG, "Current user's username is null in Firestore");
+                            Toast.makeText(this, "Error: Could not fetch current user's username", Toast.LENGTH_LONG).show();
+                        }
+                    } else {
+                        Log.e(TAG, "Current user's document does not exist in Firestore");
+                        Toast.makeText(this, "Error: Current user profile not found", Toast.LENGTH_LONG).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to fetch current user's username: " + e.getMessage(), e);
+                    Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
 
         recyclerView = findViewById(R.id.friendsRecyclerView);
         friendList = new ArrayList<>();
@@ -74,6 +96,17 @@ public class ChatListActivity extends AppCompatActivity {
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(friendAdapter);
+
+        @SuppressLint({"MissingInflatedId", "LocalSuppress"}) Button viewFriendRequestsButton = findViewById(R.id.viewFriendRequestsButton);
+        viewFriendRequestsButton.setOnClickListener(v -> {
+            if (currentUsername == null) {
+                Toast.makeText(this, "Error: Username not loaded yet", Toast.LENGTH_LONG).show();
+                return;
+            }
+            Intent intent = new Intent(ChatListActivity.this, FriendRequestsActivity.class);
+            intent.putExtra("currentUsername", currentUsername);
+            startActivity(intent);
+        });
 
         BottomNavigationView bottomNavigationMenu = findViewById(R.id.bottom_navigation);
         if (bottomNavigationMenu != null) {
