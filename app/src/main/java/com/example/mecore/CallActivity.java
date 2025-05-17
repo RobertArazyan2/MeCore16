@@ -39,22 +39,18 @@ public class CallActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_call);
 
-        // Get channel name and recipient name from intent
         channelName = getIntent().getStringExtra("channelName");
         String recipientName = getIntent().getStringExtra("recipientName");
 
-        // Initialize UI elements
         callStatusText = findViewById(R.id.callStatusText);
         muteButton = findViewById(R.id.muteButton);
         speakerButton = findViewById(R.id.speakerButton);
         endCallButton = findViewById(R.id.endCallButton);
 
-        // Set recipient name in the UI
         if (recipientName != null) {
             callStatusText.setText("Calling " + recipientName + "...");
         }
 
-        // Request permissions and start the call
         if (!checkPermissions()) {
             requestPermissions();
         } else {
@@ -62,7 +58,6 @@ public class CallActivity extends AppCompatActivity {
             startVoiceCall();
         }
 
-        // Set up button listeners
         muteButton.setOnClickListener(v -> toggleMute());
         speakerButton.setOnClickListener(v -> toggleSpeaker());
         endCallButton.setOnClickListener(v -> endCall());
@@ -168,7 +163,13 @@ public class CallActivity extends AppCompatActivity {
         if (agoraEngine != null) {
             isMuted = !isMuted;
             agoraEngine.muteLocalAudioStream(isMuted);
-            muteButton.setImageResource(isMuted ? R.drawable.ic_mute_on : R.drawable.ic_mute_off);
+            try {
+                muteButton.setImageResource(isMuted ? R.drawable.ic_mute_on : R.drawable.ic_mute_off);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to set mute button drawable: " + e.getMessage(), e);
+                // Fallback to a default drawable or disable the button
+                muteButton.setImageResource(android.R.drawable.ic_menu_info_details);
+            }
             Toast.makeText(this, isMuted ? "Microphone muted" : "Microphone unmuted", Toast.LENGTH_SHORT).show();
         }
     }
@@ -177,7 +178,13 @@ public class CallActivity extends AppCompatActivity {
         if (agoraEngine != null) {
             isSpeakerOn = !isSpeakerOn;
             agoraEngine.setEnableSpeakerphone(isSpeakerOn);
-            speakerButton.setImageResource(isSpeakerOn ? R.drawable.ic_speaker_on : R.drawable.ic_speaker_off);
+            try {
+                speakerButton.setImageResource(isSpeakerOn ? R.drawable.ic_speaker_on : R.drawable.ic_speaker_off);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to set speaker button drawable: " + e.getMessage(), e);
+                // Fallback to a default drawable or disable the button
+                speakerButton.setImageResource(android.R.drawable.ic_menu_info_details);
+            }
             Toast.makeText(this, isSpeakerOn ? "Speaker on" : "Speaker off", Toast.LENGTH_SHORT).show();
         }
     }

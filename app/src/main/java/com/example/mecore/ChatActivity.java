@@ -52,7 +52,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private EditText messageInput;
     private RecyclerView recyclerView;
-    private ImageButton callButton; // Changed from Button to ImageButton
+    private ImageButton callButton;
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -60,7 +60,6 @@ public class ChatActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
-        // Initialize RecyclerView with an empty adapter to prevent layout warning
         recyclerView = findViewById(R.id.chat_recycler_view);
         messageList = new ArrayList<>();
         adapter = new ChatAdapter(messageList, getIntent().getStringExtra("otherUsername"), this::showMessageOptions);
@@ -128,13 +127,12 @@ public class ChatActivity extends AppCompatActivity {
         Button sendMessageBtn = findViewById(R.id.sendButton);
         ImageButton goBackButton = findViewById(R.id.goBackButton);
         TextView otherUsernameTextView = findViewById(R.id.chatTitle);
-        callButton = findViewById(R.id.callButton); // Correct type: ImageButton
+        callButton = findViewById(R.id.callButton);
 
         String otherUsername = getIntent().getStringExtra("otherUsername");
         String recipientId = getIntent().getStringExtra("recipientId");
         String source = getIntent().getStringExtra("source");
 
-        // Update the adapter with the correct opponentUsername
         adapter = new ChatAdapter(messageList, otherUsername, this::showMessageOptions);
         recyclerView.setAdapter(adapter);
 
@@ -221,37 +219,32 @@ public class ChatActivity extends AppCompatActivity {
                     } else {
                         message.setSenderUsername(getIntent().getStringExtra("otherUsername"));
                     }
+                    int index = -1;
+                    for (int i = 0; i < messageList.size(); i++) {
+                        if (messageList.get(i).getId().equals(message.getId())) {
+                            index = i;
+                            break;
+                        }
+                    }
                     switch (dc.getType()) {
                         case ADDED:
-                            boolean exists = false;
-                            for (Message existingMessage : messageList) {
-                                if (existingMessage.getId().equals(message.getId())) {
-                                    exists = true;
-                                    break;
-                                }
-                            }
-                            if (!exists) {
+                            if (index == -1) { // Only add if it doesn't already exist
                                 messageList.add(message);
                                 adapter.notifyItemInserted(messageList.size() - 1);
                                 recyclerView.smoothScrollToPosition(messageList.size() - 1);
                             }
                             break;
                         case MODIFIED:
-                            for (int i = 0; i < messageList.size(); i++) {
-                                if (messageList.get(i).getId().equals(message.getId())) {
-                                    messageList.set(i, message);
-                                    adapter.notifyItemChanged(i);
-                                    break;
-                                }
+                            if (index != -1) {
+                                messageList.set(index, message);
+                                adapter.notifyItemChanged(index);
                             }
                             break;
                         case REMOVED:
-                            for (int i = 0; i < messageList.size(); i++) {
-                                if (messageList.get(i).getId().equals(message.getId())) {
-                                    messageList.remove(i);
-                                    adapter.notifyItemRemoved(i);
-                                    break;
-                                }
+                            if (index != -1) { // Only remove if it exists
+                                messageList.remove(index);
+                                adapter.notifyItemRemoved(index);
+                                adapter.notifyItemRangeChanged(index, messageList.size());
                             }
                             break;
                     }
@@ -331,7 +324,10 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void showMessageOptions(int position) {
-        if (position < 0 || position >= messageList.size()) return;
+        if (position < 0 || position >= messageList.size()) {
+            Log.e(TAG, "Invalid position for message options: " + position);
+            return;
+        }
 
         Message message = messageList.get(position);
         String currentUserId = Objects.requireNonNull(auth.getCurrentUser()).getUid();
@@ -357,6 +353,11 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void editMessage(int position) {
+        if (position < 0 || position >= messageList.size()) {
+            Log.e(TAG, "Invalid position for editing: " + position);
+            return;
+        }
+
         Message message = messageList.get(position);
         EditText editText = new EditText(this);
         editText.setText(message.getText());
@@ -368,7 +369,7 @@ public class ChatActivity extends AppCompatActivity {
                     String newText = editText.getText().toString().trim();
                     if (!newText.isEmpty()) {
                         message.setText(newText);
-                        message.setTimestamp(Timestamp.now()); // Update timestamp
+                        message.setTimestamp(Timestamp.now());
                         db.collection("chats").document(chatId).collection("messages")
                                 .document(message.getId())
                                 .set(message)
@@ -384,16 +385,35 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void deleteMessage(int position) {
+        if (position < 0 || position >= messageList.size()) {
+            Log.e(TAG, "Invalid position for deletion: " + position);
+            return;
+        }
+
         Message message = messageList.get(position);
+        String messageId = message.getId();
+
+        // Remove the message locally first
+        messageList.remove(position);
+        adapter.notifyItemRemoved(position);
+        adapter.notifyItemRangeChanged(position, messageList.size());
+
+        // Delete from Firestore
         db.collection("chats").document(chatId).collection("messages")
-                .document(message.getId())
+                .document(messageId)
                 .delete()
                 .addOnSuccessListener(aVoid -> {
-                    messageList.remove(position);
-                    adapter.notifyItemRemoved(position);
                     Toast.makeText(this, "Message deleted", Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "Message deleted successfully at position: " + position);
                 })
-                .addOnFailureListener(e -> Log.e(TAG, "Failed to delete message: " + e.getMessage()));
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to delete message: " + e.getMessage());
+                    Toast.makeText(this, "Failed to delete message", Toast.LENGTH_SHORT).show();
+                    // Revert the local change if Firestore deletion fails
+                    messageList.add(position, message);
+                    adapter.notifyItemInserted(position);
+                    adapter.notifyItemRangeChanged(position, messageList.size());
+                });
     }
 
     @Override

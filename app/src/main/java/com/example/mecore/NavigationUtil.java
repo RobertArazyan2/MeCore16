@@ -7,9 +7,29 @@ import android.widget.Toast;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class NavigationUtil {
 
     private static final String TAG = "NavigationUtil";
+
+    // Map of navigation item IDs to their corresponding activity classes
+    private static final Map<Integer, Class<?>> ACTIVITY_MAP = new HashMap<>();
+    // Map of navigation item IDs to their positions (for determining animation direction)
+    private static final Map<Integer, Integer> ITEM_POSITION = new HashMap<>();
+
+    static {
+        // Activity mappings
+        ACTIVITY_MAP.put(R.id.navigation_main, MainActivity.class);
+        ACTIVITY_MAP.put(R.id.navigation_chat, ChatListActivity.class);
+        ACTIVITY_MAP.put(R.id.navigation_profile, ProfileActivity.class);
+
+        // Position mappings (based on menu order: Main -> Chats -> Profile)
+        ITEM_POSITION.put(R.id.navigation_main, 0);
+        ITEM_POSITION.put(R.id.navigation_chat, 1);
+        ITEM_POSITION.put(R.id.navigation_profile, 2);
+    }
 
     public static void setupBottomNavigationMenu(Activity currentActivity, BottomNavigationView bottomNavigationMenu, int selectedItemId) {
         // Set the selected item
@@ -18,55 +38,56 @@ public class NavigationUtil {
         // Set up the navigation listener
         bottomNavigationMenu.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
-            String itemName;
-            try {
-                itemName = currentActivity.getResources().getResourceEntryName(itemId);
-                Log.d(TAG, "Item selected in " + currentActivity.getClass().getSimpleName() + ": ID=" + itemId + ", Name=" + itemName);
-            } catch (Exception e) {
-                itemName = "Unknown";
-                Log.e(TAG, "Failed to get resource name for ID: " + itemId, e);
+            Log.d(TAG, "Item selected in " + currentActivity.getClass().getSimpleName() + ": ID=" + itemId);
+
+            if (itemId == selectedItemId) {
+                Log.d(TAG, "Already on the current activity");
+                return true;
             }
 
-            if (itemId == R.id.navigation_main) {
-                if (currentActivity instanceof MainActivity) {
-                    Log.d(TAG, "Already on MainActivity");
-                    return true;
-                }
-                Log.d(TAG, "Navigating to MainActivity");
-                navigateToActivity(currentActivity, MainActivity.class);
+            Class<?> targetActivityClass = ACTIVITY_MAP.get(itemId);
+            if (targetActivityClass != null) {
+                Log.d(TAG, "Navigating to " + targetActivityClass.getSimpleName());
+                navigateToActivity(currentActivity, targetActivityClass, selectedItemId, itemId);
                 return true;
-            } else if (itemId == R.id.navigation_profile) {
-                if (currentActivity instanceof ProfileActivity) {
-                    Log.d(TAG, "Already on ProfileActivity");
-                    return true;
-                }
-                Log.d(TAG, "Navigating to ProfileActivity");
-                navigateToActivity(currentActivity, ProfileActivity.class);
-                return true;
-            } else if (itemId == R.id.navigation_chat) {
-                if (currentActivity instanceof ChatListActivity) {
-                    Log.d(TAG, "Already on ChatListActivity");
-                    return true;
-                }
-                Log.d(TAG, "Navigating to ChatListActivity");
-                navigateToActivity(currentActivity, ChatListActivity.class);
-                return true;
+            } else {
+                Log.w(TAG, "Unknown item ID: " + itemId);
+                return false;
             }
-            Log.w(TAG, "Unknown item ID: " + itemId);
-            return false;
         });
     }
 
-    private static void navigateToActivity(Activity currentActivity, Class<?> targetActivityClass) {
+    private static void navigateToActivity(Activity currentActivity, Class<?> targetActivityClass, int currentItemId, int targetItemId) {
         try {
             Intent intent = new Intent(currentActivity, targetActivityClass);
             // Clear the activity stack and bring the target activity to the front
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+            // Determine animation direction based on menu item positions
+            int currentPosition = ITEM_POSITION.getOrDefault(currentItemId, 0);
+            int targetPosition = ITEM_POSITION.getOrDefault(targetItemId, 0);
+            boolean isMovingRight = targetPosition > currentPosition;
+
             currentActivity.startActivity(intent);
+            // Apply animation based on direction
+            if (isMovingRight) {
+                // Moving right: new activity slides in from right, current slides out to left
+                currentActivity.overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            } else {
+                // Moving left: new activity slides in from left, current slides out to right
+                currentActivity.overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
+            }
+
             Log.d(TAG, targetActivityClass.getSimpleName() + " started successfully");
             // Only finish the current activity if it's not the target activity
             if (!currentActivity.getClass().equals(targetActivityClass)) {
                 currentActivity.finish();
+                // Apply the same animation direction for finishing
+                if (isMovingRight) {
+                    currentActivity.overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+                } else {
+                    currentActivity.overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
+                }
             }
         } catch (Exception e) {
             Log.e(TAG, "Failed to start " + targetActivityClass.getSimpleName() + ": " + e.getMessage(), e);

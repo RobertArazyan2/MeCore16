@@ -1,6 +1,7 @@
 package com.example.mecore;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -76,22 +77,31 @@ public class ChatListActivity extends AppCompatActivity {
             intent.putExtra("source", "ChatListActivity");
             startActivity(intent);
         }, friend -> {
-            // Delete friend from Firestore
-            db.collection("users")
-                    .document(currentUserId)
-                    .collection("friends")
-                    .document(friend.getUserId())
-                    .delete()
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "Removed " + friend.getUsername() + " from friends", Toast.LENGTH_SHORT).show();
-                        // Also remove the current user from the friend's friends list
+            // Show confirmation dialog before deleting friend
+            new AlertDialog.Builder(ChatListActivity.this)
+                    .setTitle("Unfriend Confirmation")
+                    .setMessage("Are you sure you want to unfriend " + friend.getUsername() + "?")
+                    .setPositiveButton("Yes", (dialog, which) -> {
+                        // Delete friend from Firestore
                         db.collection("users")
-                                .document(friend.getUserId())
-                                .collection("friends")
                                 .document(currentUserId)
-                                .delete();
+                                .collection("friends")
+                                .document(friend.getUserId())
+                                .delete()
+                                .addOnSuccessListener(aVoid -> {
+                                    Toast.makeText(ChatListActivity.this, "Removed " + friend.getUsername() + " from friends", Toast.LENGTH_SHORT).show();
+                                    // Also remove the current user from the friend's friends list
+                                    db.collection("users")
+                                            .document(friend.getUserId())
+                                            .collection("friends")
+                                            .document(currentUserId)
+                                            .delete();
+                                })
+                                .addOnFailureListener(e -> Toast.makeText(ChatListActivity.this, "Failed to remove friend: " + e.getMessage(), Toast.LENGTH_LONG).show());
                     })
-                    .addOnFailureListener(e -> Toast.makeText(this, "Failed to remove friend: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                    .setNegativeButton("No", (dialog, which) -> dialog.dismiss())
+                    .setCancelable(true)
+                    .show();
         });
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));

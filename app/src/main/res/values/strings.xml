@@ -68,4 +68,7 @@
     <string name="failed_to_send_message" />
     <string name="error_loading_messages" />
     <string name="message">Message</string>
+    <string name="title_main" />
+    <string name="title_chat" />
+    <string name="title_profile" />
 </resources>
