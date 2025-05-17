@@ -24,6 +24,7 @@
         android:autofillHints=""
         android:hint="@string/email"
         android:textColorHint="@color/white"
+        android:textColor="@color/white"
         android:inputType="textEmailAddress" />
 
     <EditText
@@ -31,6 +32,7 @@
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:autofillHints=""
+        android:textColor="@color/white"
         android:hint="@string/password"
         android:textColorHint="@color/white"
         android:inputType="textPassword" />
@@ -41,6 +43,7 @@
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:autofillHints=""
+        android:textColor="@color/white"
         android:hint="@string/username"
         android:textColorHint="@color/white"
         android:inputType="textPersonName" />
