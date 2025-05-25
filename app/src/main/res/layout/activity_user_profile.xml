@@ -19,6 +19,18 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <TextView
+        android:id="@+id/mutualGamesTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:text="Mutual Games: Loading..."
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/usernameTextView" />
+
     <Button
         android:id="@+id/chatButton"
         android:layout_width="0dp"
@@ -29,7 +41,7 @@
         android:text="Chat"
         android:backgroundTint="#4CAF50"
         android:textColor="#FFFFFF"
-        app:layout_constraintTop_toBottomOf="@id/usernameTextView"
+        app:layout_constraintTop_toBottomOf="@id/mutualGamesTextView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
