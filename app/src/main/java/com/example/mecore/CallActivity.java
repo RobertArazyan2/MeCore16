@@ -1,7 +1,9 @@
 package com.example.mecore;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.media.AudioManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.ImageButton;
@@ -27,6 +29,7 @@ public class CallActivity extends AppCompatActivity {
     private boolean isMuted = false;
     private boolean isSpeakerOn = false;
     private String channelName;
+    private AudioManager audioManager;
 
     private TextView callStatusText;
     private ImageButton muteButton;
@@ -51,6 +54,10 @@ public class CallActivity extends AppCompatActivity {
             callStatusText.setText("Calling " + recipientName + "...");
         }
 
+        // Initialize AudioManager
+        audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        requestAudioFocus();
+
         if (!checkPermissions()) {
             requestPermissions();
         } else {
@@ -64,24 +71,50 @@ public class CallActivity extends AppCompatActivity {
     }
 
     private boolean checkPermissions() {
-        return ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+        boolean recordAudioGranted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+        boolean modifyAudioSettingsGranted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.MODIFY_AUDIO_SETTINGS) == PackageManager.PERMISSION_GRANTED;
+        return recordAudioGranted && modifyAudioSettingsGranted;
     }
 
     private void requestPermissions() {
-        ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.RECORD_AUDIO}, PERMISSION_REQ_CODE);
+        ActivityCompat.requestPermissions(this, new String[]{
+                android.Manifest.permission.RECORD_AUDIO,
+                android.Manifest.permission.MODIFY_AUDIO_SETTINGS
+        }, PERMISSION_REQ_CODE);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_REQ_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            boolean allGranted = true;
+            for (int result : grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
+                }
+            }
+            if (allGranted) {
                 setupVoiceCalling();
                 startVoiceCall();
             } else {
-                Toast.makeText(this, "Microphone permission is required for voice calling", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Required permissions denied. Call cannot proceed.", Toast.LENGTH_LONG).show();
                 finish();
             }
+        }
+    }
+
+    private void requestAudioFocus() {
+        if (audioManager != null) {
+            audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN);
+            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        }
+    }
+
+    private void abandonAudioFocus() {
+        if (audioManager != null) {
+            audioManager.abandonAudioFocus(null);
+            audioManager.setMode(AudioManager.MODE_NORMAL);
         }
     }
 
@@ -138,6 +171,10 @@ public class CallActivity extends AppCompatActivity {
             agoraEngine = RtcEngine.create(config);
             agoraEngine.setChannelProfile(Constants.CHANNEL_PROFILE_COMMUNICATION);
             agoraEngine.enableAudio();
+            // Set default audio route to speaker
+            agoraEngine.setDefaultAudioRoutetoSpeakerphone(true);
+            isSpeakerOn = true; // Reflect the initial state
+            runOnUiThread(() -> speakerButton.setImageResource(R.drawable.call_speaker_on));
         } catch (Exception e) {
             Log.e(TAG, "setupVoiceCalling: Failed to initialize Agora: " + e.getMessage(), e);
             Toast.makeText(this, "Failed to initialize voice calling: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -160,14 +197,13 @@ public class CallActivity extends AppCompatActivity {
     }
 
     private void toggleMute() {
-        if (agoraEngine != null) {
+        if (agoraEngine != null && isInCall) {
             isMuted = !isMuted;
             agoraEngine.muteLocalAudioStream(isMuted);
             try {
-                muteButton.setImageResource(isMuted ? R.drawable.ic_mute_on : R.drawable.ic_mute_off);
+                muteButton.setImageResource(isMuted ? R.drawable.call_mute_on : R.drawable.call_mute_off);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to set mute button drawable: " + e.getMessage(), e);
-                // Fallback to a default drawable or disable the button
                 muteButton.setImageResource(android.R.drawable.ic_menu_info_details);
             }
             Toast.makeText(this, isMuted ? "Microphone muted" : "Microphone unmuted", Toast.LENGTH_SHORT).show();
@@ -175,14 +211,19 @@ public class CallActivity extends AppCompatActivity {
     }
 
     private void toggleSpeaker() {
-        if (agoraEngine != null) {
+        if (agoraEngine != null && isInCall) {
             isSpeakerOn = !isSpeakerOn;
             agoraEngine.setEnableSpeakerphone(isSpeakerOn);
+            boolean isSpeakerActuallyOn = agoraEngine.isSpeakerphoneEnabled();
+            Log.d(TAG, "toggleSpeaker: Speaker set to " + isSpeakerOn + ", actual state: " + isSpeakerActuallyOn);
+            if (isSpeakerOn != isSpeakerActuallyOn) {
+                Log.w(TAG, "Speaker state mismatch! Attempting to correct...");
+                agoraEngine.setEnableSpeakerphone(isSpeakerOn);
+            }
             try {
-                speakerButton.setImageResource(isSpeakerOn ? R.drawable.ic_speaker_on : R.drawable.ic_speaker_off);
+                speakerButton.setImageResource(isSpeakerOn ? R.drawable.call_speaker_on : R.drawable.call_speaker_off);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to set speaker button drawable: " + e.getMessage(), e);
-                // Fallback to a default drawable or disable the button
                 speakerButton.setImageResource(android.R.drawable.ic_menu_info_details);
             }
             Toast.makeText(this, isSpeakerOn ? "Speaker on" : "Speaker off", Toast.LENGTH_SHORT).show();
@@ -200,6 +241,7 @@ public class CallActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        abandonAudioFocus();
         if (agoraEngine != null) {
             agoraEngine.leaveChannel();
             RtcEngine.destroy();

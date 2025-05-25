@@ -1,37 +1,31 @@
 package com.example.mecore;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.bumptech.glide.Glide;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -39,26 +33,13 @@ public class ProfileActivity extends AppCompatActivity {
 
     private static final String TAG = "ProfileActivity";
     private EditText usernameEditText;
-    private ImageView profileImageView;
     private TextView selectedGamesTextView;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
-    private FirebaseStorage storage;
     private String currentUsername;
     private List<String> currentSelectedGames;
     private List<String> selectedGames = new ArrayList<>();
     private final ExecutorService executorService = Executors.newFixedThreadPool(2);
-    private final ActivityResultLauncher<Intent> imagePickerLauncher = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                    Uri imageUri = result.getData().getData();
-                    if (imageUri != null) {
-                        profileImageView.setImageURI(imageUri);
-                        uploadProfileImage(imageUri, Objects.requireNonNull(mAuth.getCurrentUser()).getUid());
-                    }
-                }
-            });
 
     @SuppressLint("SetTextI18n")
     private final ActivityResultLauncher<Intent> gameSelectionLauncher = registerForActivityResult(
@@ -86,8 +67,7 @@ public class ProfileActivity extends AppCompatActivity {
         selectedGamesTextView = findViewById(R.id.selectedGamesTextView);
         Button saveButton = findViewById(R.id.buttonSave);
         Button changeGamesButton = findViewById(R.id.buttonChangeGames);
-        Button logoutButton = findViewById(R.id.buttonLogout); // New logout button
-        profileImageView = findViewById(R.id.profileImageView);
+        Button logoutButton = findViewById(R.id.buttonLogout);
 
         if (selectedGamesTextView == null) {
             Log.e(TAG, "selectedGamesTextView is null after findViewById. Check activity_profile.xml for ID selectedGamesTextView");
@@ -96,7 +76,6 @@ public class ProfileActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
-        storage = FirebaseStorage.getInstance();
 
         // Set up BottomNavigationMenu
         Log.d(TAG, "onCreate: Setting up BottomNavigationMenu");
@@ -129,6 +108,8 @@ public class ProfileActivity extends AppCompatActivity {
                     intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                     startActivity(intent);
                     Log.d("BottomNav", "MainActivity started successfully");
+                    // Apply slide-left animation (Profile → Main)
+                    overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
                     finish();
                 } catch (Exception e) {
                     Log.e("BottomNav", "Failed to start MainActivity: " + e.getMessage(), e);
@@ -146,6 +127,8 @@ public class ProfileActivity extends AppCompatActivity {
                     intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                     startActivity(intent);
                     Log.d("BottomNav", "ChatListActivity started successfully");
+                    // Apply slide-left animation (Profile → Chats)
+                    overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
                     finish();
                 } catch (Exception e) {
                     Log.e("BottomNav", "Failed to start ChatListActivity: " + e.getMessage(), e);
@@ -158,8 +141,6 @@ public class ProfileActivity extends AppCompatActivity {
         });
 
         loadUserProfile();
-
-        profileImageView.setOnClickListener(v -> openFileChooser());
 
         saveButton.setOnClickListener(v -> saveUserProfile());
 
@@ -176,8 +157,18 @@ public class ProfileActivity extends AppCompatActivity {
             Log.e(TAG, "logoutButton is null! Check activity_profile.xml for ID buttonLogout");
             Toast.makeText(this, "Error: Logout button not found in layout", Toast.LENGTH_LONG).show();
         } else {
-            logoutButton.setOnClickListener(v -> logout());
+            logoutButton.setOnClickListener(v -> showLogoutConfirmationDialog());
         }
+    }
+
+    private void showLogoutConfirmationDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Confirm Logout")
+                .setMessage("Are you sure you want to log out?")
+                .setPositiveButton("Yes", (dialog, which) -> logout())
+                .setNegativeButton("No", (dialog, which) -> dialog.dismiss())
+                .setCancelable(true)
+                .show();
     }
 
     private void logout() {
@@ -187,6 +178,8 @@ public class ProfileActivity extends AppCompatActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show();
+        // Apply fade animation for logout
+        overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_left);
         finish();
     }
 
@@ -203,7 +196,6 @@ public class ProfileActivity extends AppCompatActivity {
             userRef.get().addOnSuccessListener(documentSnapshot -> {
                 if (documentSnapshot.exists()) {
                     String loadedUsername = documentSnapshot.getString("username");
-                    String profileImageUrl = documentSnapshot.getString("profileImageUrl");
                     currentSelectedGames = parseGameList(documentSnapshot.get("selectedGames"));
                     selectedGames = new ArrayList<>(currentSelectedGames != null ? currentSelectedGames : new ArrayList<>());
                     Log.d(TAG, "Loaded user profile from Firestore: username=" + loadedUsername + ", selectedGames=" + selectedGames.toString());
@@ -223,10 +215,6 @@ public class ProfileActivity extends AppCompatActivity {
                             selectedGamesTextView.setText("Selected Games: " + (selectedGames.isEmpty() ? "None" : String.join(", ", selectedGames)));
                         } else {
                             Log.e(TAG, "selectedGamesTextView is null in loadUserProfile");
-                        }
-
-                        if (profileImageUrl != null && !profileImageUrl.isEmpty()) {
-                            Glide.with(ProfileActivity.this).load(profileImageUrl).into(profileImageView);
                         }
                     });
                 } else {
@@ -266,29 +254,25 @@ public class ProfileActivity extends AppCompatActivity {
         }
 
         if (usernameChanged) {
-            // Check if the new username is available
             db.collection("usernames").document(newUsername).get()
                     .addOnSuccessListener(documentSnapshot -> {
                         if (documentSnapshot.exists()) {
                             Toast.makeText(this, "Username already taken, please choose a different one", Toast.LENGTH_LONG).show();
                         } else {
-                            // Verify ownership of the old username
                             if (currentUsername != null && !currentUsername.isEmpty()) {
-                                db.collection("-non-null").document(currentUsername).get()
+                                db.collection("usernames").document(currentUsername).get()
                                         .addOnSuccessListener(oldUsernameSnapshot -> {
                                             if (oldUsernameSnapshot.exists() && oldUsernameSnapshot.getString("userId").equals(user.getUid())) {
                                                 updateUserProfile(user.getUid(), newUsername);
                                             } else {
                                                 Log.w(TAG, "Old username " + currentUsername + " does not belong to user " + user.getUid());
                                                 Toast.makeText(this, "Profile Updated!", Toast.LENGTH_LONG).show();
-                                                // Update the user document without touching usernames
                                                 updateUserProfileWithoutUsernames(user.getUid(), newUsername);
                                             }
                                         })
                                         .addOnFailureListener(e -> {
                                             Log.e(TAG, "Failed to verify old username: " + e.getMessage(), e);
                                             Toast.makeText(this, "Failed to verify old username: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                            // Proceed with update without touching usernames as a fallback
                                             updateUserProfileWithoutUsernames(user.getUid(), newUsername);
                                         });
                             } else {
@@ -301,7 +285,6 @@ public class ProfileActivity extends AppCompatActivity {
                         Toast.makeText(this, "Failed to check username availability: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     });
         } else {
-            // No username change, just update games
             updateUserProfileWithoutUsernames(user.getUid(), newUsername);
         }
     }
@@ -393,29 +376,6 @@ public class ProfileActivity extends AppCompatActivity {
         if (games1 == null && games2 == null) return true;
         if (games1 == null || games2 == null) return false;
         return games1.size() == games2.size() && new HashSet<>(games1).containsAll(games2) && new HashSet<>(games2).containsAll(games1);
-    }
-
-    private void openFileChooser() {
-        Intent intent = new Intent();
-        intent.setType("image/*");
-        intent.setAction(Intent.ACTION_GET_CONTENT);
-        imagePickerLauncher.launch(Intent.createChooser(intent, "Select Profile Picture"));
-    }
-
-    private void uploadProfileImage(Uri imageUri, String userId) {
-        StorageReference fileRef = storage.getReference("profile_pictures").child(userId + ".jpg");
-        fileRef.putFile(imageUri).continueWithTask(task -> {
-            if (!task.isSuccessful()) throw Objects.requireNonNull(task.getException());
-            return fileRef.getDownloadUrl();
-        }).addOnSuccessListener(uri -> db.collection("users").document(userId).update("profileImageUrl", uri.toString())
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Profile picture updated!", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to update profileImageUrl in Firestore: " + e.getMessage(), e);
-                    Toast.makeText(this, "Failed to update profile picture in database: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                })).addOnFailureListener(e -> {
-            Log.e(TAG, "Image upload failed: " + e.getMessage(), e);
-            Toast.makeText(this, "Image upload failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        });
     }
 
     private List<String> parseGameList(Object gamesObject) {

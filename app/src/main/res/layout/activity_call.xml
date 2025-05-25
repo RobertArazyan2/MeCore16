@@ -40,8 +40,7 @@
             android:background="@null"
             android:contentDescription="Mute Microphone"
             android:scaleType="centerInside"
-            android:src="@drawable/ic_mute_off"
-            android:tint="@android:color/white" />
+            android:src="@drawable/call_mute_off" />
 
         <ImageButton
             android:id="@+id/speakerButton"
@@ -51,8 +50,7 @@
             android:background="@null"
             android:contentDescription="Toggle Speaker"
             android:scaleType="centerInside"
-            android:src="@drawable/ic_speaker_off"
-            android:tint="@android:color/white" />
+            android:src="@drawable/call_speaker_on" />
 
         <ImageButton
             android:id="@+id/endCallButton"
@@ -66,5 +64,4 @@
             android:tint="@android:color/white" />
 
     </LinearLayout>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

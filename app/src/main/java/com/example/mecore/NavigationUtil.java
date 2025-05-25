@@ -40,6 +40,13 @@ public class NavigationUtil {
             int itemId = item.getItemId();
             Log.d(TAG, "Item selected in " + currentActivity.getClass().getSimpleName() + ": ID=" + itemId);
 
+            // Log icon details for debugging
+            if (item.getIcon() != null) {
+                Log.d(TAG, "Icon bounds for item " + itemId + ": " + item.getIcon().getBounds().width() + "x" + item.getIcon().getBounds().height());
+            } else {
+                Log.e(TAG, "Icon for item " + itemId + " is null or not loaded");
+            }
+
             if (itemId == selectedItemId) {
                 Log.d(TAG, "Already on the current activity");
                 return true;
@@ -71,10 +78,8 @@ public class NavigationUtil {
             currentActivity.startActivity(intent);
             // Apply animation based on direction
             if (isMovingRight) {
-                // Moving right: new activity slides in from right, current slides out to left
                 currentActivity.overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
             } else {
-                // Moving left: new activity slides in from left, current slides out to right
                 currentActivity.overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
             }
 
@@ -82,7 +87,6 @@ public class NavigationUtil {
             // Only finish the current activity if it's not the target activity
             if (!currentActivity.getClass().equals(targetActivityClass)) {
                 currentActivity.finish();
-                // Apply the same animation direction for finishing
                 if (isMovingRight) {
                     currentActivity.overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
                 } else {
