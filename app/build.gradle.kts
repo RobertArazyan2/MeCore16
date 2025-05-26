@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.mecore"
+    namespace = "com.MeCore.mecore"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.mecore"
+        applicationId = "com.MeCore.mecore"
         minSdk = 29
         targetSdk = 35
         versionCode = 1
